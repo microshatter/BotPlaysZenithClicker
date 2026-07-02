@@ -2,11 +2,10 @@ love.window.setIcon(love.image.newImageData('assets/icon.png'))
 love.mouse.setVisible(false)
 
 require 'Zenitha'
-require 'module/bot'
 
 ZENITHA.setMainLoopSpeed(240)
 ZENITHA.setRenderRate(50)
-ZENITHA.setAppInfo("Zenith Clicker", SYSTEM .. " " .. (require 'version'.appVer))
+ZENITHA.setAppInfo("Bot Plays Zenith Clicker", SYSTEM .. " " .. (require 'version'.appVer))
 ZENITHA.setClickDist(62)
 ZENITHA.setFirstScene('joining')
 ZENITHA._cursor.speed = 1600
@@ -1551,6 +1550,8 @@ else
         state = "Enjoying Music",
     }
 end
+
+require 'module/bot'
 
 if FILE.exist('avatar') then
     local suc, res = pcall(GC.newImage, 'avatar')
