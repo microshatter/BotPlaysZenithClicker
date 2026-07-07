@@ -451,7 +451,8 @@ function scene.update(dt)
     for i = 1, #Cards do
         Cards[i]:update(GAME.slowmo and dt / 6.26 or dt)
     end
-    Bot.update(GAME.slowmo and dt / 6.26 or dt)
+    Bot.update(dt)
+    -- Bot.update(GAME.slowmo and dt / 6.26 or dt)
     if GAME.playing and (KBIsDown('escape') or MSIsDown(3)) then
         GAME.forfeitTimer = GAME.forfeitTimer +
             (GAME.slowmo and dt / 6.26 or dt) * clampInterpolate(12, 2.6, 26, 1, min(GAME.totalQuest, GAME.time))

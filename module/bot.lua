@@ -89,8 +89,11 @@ function Bot.update(dt)
     end
     if Bot.is_waiting then
         Bot.t2 = Bot.t2 - dt
-        if Bot.t2 > 0 then return end
-        Bot.is_waiting = false
+        if Bot.t2 > 0 then
+            return
+        else
+            Bot.is_waiting = false
+        end
     end
 
     if GAME.playing then
