@@ -2574,11 +2574,6 @@ function GAME.finish(reason)
                 end
             end
         end
-        if Daily.needSubmit then
-            CurlRequest('submit')
-            Daily.needSubmit = false
-        end
-
         -- Update ZP
         local oldZP = STAT.zp
         local thres1 = zpGain * 16

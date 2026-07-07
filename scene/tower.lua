@@ -1,3 +1,5 @@
+require 'module/bot'
+
 local next = next
 local max, min = math.max, math.min
 local sin, cos = math.sin, math.cos
@@ -196,6 +198,8 @@ local function keyTrigger(key)
             local W = scene.widgetList.about
             W._pressTime = W._pressTimeMax * 2
             W._hoverTime = W._hoverTimeMax
+        elseif key == 'f6' then
+            Bot.toggle()
         end
     end
 end
@@ -445,6 +449,8 @@ function scene.update(dt)
     for i = 1, #Cards do
         Cards[i]:update(GAME.slowmo and dt / 6.26 or dt)
     end
+    Bot.update(dt)
+    -- Bot.update(GAME.slowmo and dt / 6.26 or dt)
     if GAME.playing and (KBisDown('escape') or MSisDown(3)) then
         GAME.forfeitTimer = GAME.forfeitTimer +
             (GAME.slowmo and dt / 6.26 or dt) * clampInterpolate(12, 2.6, 26, 1, min(GAME.totalQuest, GAME.time))
@@ -1753,6 +1759,16 @@ scene.widgetList = {
         fontSize = 30, text = "ABOUT ",
         onPress = function() love.keypressed('f2') end,
         onClick = function() love.keyreleased('f2') end,
+    },
+    WIDGET.new {
+        name = 'bot', type = 'button',
+        pos = { 1, 0 }, x = -60, y = 410, w = 160, h = 60,
+        color = { COLOR.HEX '383838' },
+        textColor = { COLOR.HEX '909090' },
+        sound_hover = 'menutap',
+        fontSize = 30, text = "BOT ",
+        onPress = function() Bot.toggle() end,
+        -- onClick = function() Bot.toggle() end,
     },
     WIDGET.new {
         name = 'start', type = 'button',
