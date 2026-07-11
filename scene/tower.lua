@@ -1881,15 +1881,15 @@ scene.widgetList = {
                     SFX.play('no')
                 end
             else
-                GAME.pieceEffectID = GAME.pieceEffectID % #PieceData + 1
-                if GAME.pieceEffectID < #PieceData then
+                GAME.pieceEffectID = (GAME.pieceEffectID + (KBisDown('lshift', 'rshift') and -1 or 1)) % (#PieceData + 1)
+                if GAME.pieceEffectID > 0 then
                     local piece = ('zsjltoi'):sub(GAME.pieceEffectID, GAME.pieceEffectID)
                     SFX.play(piece, 1, 0, Tone(6))
                 else
                     SFX.play('allclear')
                 end
 
-                for i = 1, #PieceData - 1 do
+                for i = 1, #PieceData do
                     GAME[PieceData[i].id] = GAME.pieceEffectID == i
                 end
 

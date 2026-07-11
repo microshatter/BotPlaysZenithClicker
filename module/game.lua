@@ -1685,7 +1685,7 @@ end
 
 function GAME.refreshPieceFstr()
     TABLE.clear(GAME.pieceFstr)
-    for i = 1, #PieceData - 1 do
+    for i = 1, #PieceData do
         if GAME[PieceData[i].id] then TABLE.append(GAME.pieceFstr, PieceData[i].piece) end
     end
     GAME.pieceFstrObj:set(GAME.pieceFstr)
@@ -2494,7 +2494,7 @@ function GAME.finish(reason)
 
     -- Shutdown game state
     GAME.playing = false
-    if M.DH == 2 then GAME.finishTime = love.timer.getTime() end
+    if M.DH == 2 or URM and M.IN == 2 then GAME.finishTime = love.timer.getTime() end
     ins(GAME.secTime, GAME.floorTime)
     GAME.refreshSectionTime()
     GAME.life, GAME.life2 = 0, 0
@@ -2568,7 +2568,8 @@ function GAME.finish(reason)
 
         -- ZP of current run
         local zpGain = GAME.roundHeight * GAME.comboZP
-        TEXTS.zpChange:set(("%.0f ZP  (+%.0f%s)"):format(zpGain, 0, Daily.actived and ", 260%" or ""))
+        local str = Daily.actived and "%.0f ZP  (+%.0f, 260%%)" or "%.0f ZP  (+%.0f)"
+        TEXTS.zpChange:set(str:format(zpGain, 0))
 
         -- Daily
         if Daily.actived then
@@ -2592,23 +2593,19 @@ function GAME.finish(reason)
             end
         end
         -- Update ZP
-        local oldZP = STAT.zp
-        local thres1 = zpGain * 16
-        local thres2 = zpGain * 26
-        local newZP = max(
-            oldZP, -- won't drop
-            oldZP < thres1 and oldZP + zpGain or
-            thres1 + (oldZP - thres1) * (9 / 10) + (thres2 - thres1) * (1 / 10)
-        )
-        if Daily.actived then newZP = MATH.clamp(newZP + (newZP - oldZP) * 1.6, newZP, 50 * zpGain) end
-        local zpEarn = newZP - oldZP
-        if zpEarn > 0 then
+        local newZP = STAT.zp +
+            zpGain *                           -- base ZP gain
+            icLerp(26, 16, STAT.zp / zpGain) * -- soft cap: slow down after 16x, stop at 26x
+            (Daily.actived and 2.6 or 1)       -- gain 2.6x on daily challenge
+        local zpAdd = newZP - STAT.zp
+        if zpAdd > 0 then
             TASK.new(function()
                 TASK.yieldT(0.626)
                 TWEEN.new(function(t)
-                    TEXTS.zpChange:set(("%.0f ZP  (+%.0f%s)"):format(zpGain, zpEarn * t, Daily.actived and ", 260%" or ""))
+                    local str = Daily.actived and "%.0f ZP  (+%.0f, 260%%)" or "%.0f ZP  (+%.0f)"
+                    TEXTS.zpChange:set(str:format(zpGain, zpAdd * t))
                 end):setEase('InOutCubic'):setDuration(2):run()
-                SFX.play('ratingraise', zpEarn ^ .5 / 60)
+                SFX.play('ratingraise', zpAdd ^ .5 / 60)
             end)
         end
 
@@ -2658,7 +2655,7 @@ function GAME.finish(reason)
         end
 
         local resStr = {}
-        for i = 1, #PieceData - 1 do
+        for i = 1, #PieceData do
             if GAME[PieceData[i].id] then TABLE.append(resStr, PieceData[i].text) end
         end
         if #resStr > 0 then ins(resStr, " ") end

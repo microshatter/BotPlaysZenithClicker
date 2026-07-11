@@ -1,8 +1,8 @@
 return {
     ["appName"] = "Bot Plays Zenith Clicker",
-    ["apkCode"] = 011800,
-    ["verCode"] = 011800,
+    ["apkCode"] = 011803,
+    ["verCode"] = 011803,
 
-    ["appVer"] = "V1.18.0",
-    ["verStr"] = "1.18.0",
+    ["appVer"] = "V1.18.3",
+    ["verStr"] = "1.18.3",
 }
