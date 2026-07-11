@@ -193,7 +193,7 @@ jobs:
           import re
           product_name = re.sub(r'[^A-Za-z0-9]+', '-', '${{ needs.get-info.outputs.app-name }}').strip('-').lower()
           with open(os.getenv('GITHUB_OUTPUT'), 'a') as f:
-            f.write('bundle-id=org.mrz626.' + product_name + '\n')
+            f.write('bundle-id=io.github.microshatter.' + product_name + '\n')
             f.write('product-name=' + product_name + '\n')
       - name: Download core love package
         uses: actions/download-artifact@v4
