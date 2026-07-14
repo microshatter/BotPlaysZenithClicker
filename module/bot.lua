@@ -6,12 +6,13 @@
 local Bot = {
     enabled = false,
     busy = false,
-    delay = .15,
-    -- delay = 0,
+    -- delay = .15,
+    delay = 0,
     timer = 0,
     t2 = 0,
     playing = false,
     is_waiting = false,
+    actions = 0,
 }
 _G.Bot = Bot
 
@@ -20,6 +21,8 @@ local GAME = GAME
 local M = GAME.mod
 local CD = Cards
 local TABLE = TABLE
+local game_stats = GAME.playing
+local last_sound = CONF.sfx
 
 local function applyCombo(set)
     local changed
@@ -73,14 +76,36 @@ function Bot.toggle()
     if Bot.enabled then
         SFX.play('menuconfirm')
         MSG('dark', "BOT ENGAGED", 2.6)
+        last_sound = CONF.sfx
     else
         SFX.play('menuback')
         MSG('dark', "BOT DISENGAGED", 2.6)
         Bot.playing = false
+        if last_sound ~= CONF.sfx then
+            love.keypressed('f3')
+            love.keyreleased('f3')
+        end
     end
 end
 
 function Bot.update(dt)
+    if GAME.playing then
+        if not game_stats then
+            game_stats = true
+        end
+        if Bot.actions / GAME.time < 30 then
+            if last_sound > CONF.sfx then
+                love.keypressed('f3')
+                love.keyreleased('f3')
+            end
+        end
+    else
+        if game_stats then
+            game_stats = false
+        end
+        Bot.actions = 0
+    end
+
     if not Bot.enabled then return end
     if Bot.busy then
         Bot.timer = Bot.timer - dt
@@ -89,7 +114,10 @@ function Bot.update(dt)
     end
     if Bot.is_waiting then
         Bot.t2 = Bot.t2 - dt
-        if Bot.t2 > 0 then
+        if GAME.playing then
+            Bot.t2 = 0
+            MSG('warn', "Game started while waiting - resuming", 3)
+        elseif Bot.t2 > 0 then
             return
         else
             Bot.is_waiting = false
@@ -103,6 +131,13 @@ function Bot.update(dt)
             Bot.t2 = 0
         end
         Bot._updatePlaying()
+        if Bot.actions / GAME.time > 30 then
+            if CONF.sfx > 0 then
+                MSG('warn', "Bot is acting too fast! Turning off sfx")
+                love.keypressed('f3')
+                love.keyreleased('f3')
+            end
+        end
     else
         if Bot.playing then
             Bot.playing = false
@@ -175,6 +210,7 @@ function Bot._updateMenu()
         if not TASK.getLock('cannotStart') then
             Bot._schedule(.42)
             GAME.start()
+            Bot.actions = 0
         end
         return
     end
@@ -210,6 +246,7 @@ function Bot._updateMenu()
             toggleUltra()
         end
         GAME.start()
+        Bot.actions = 0
     end
 end
 
@@ -235,7 +272,6 @@ end
 function Bot._updatePlaying()
     if #GAME.quests == 0 then return end
 
-
     -- 1. Activate required cards that aren't flipped yet (with 1 % misclick)
     for _, C in ipairs(CD) do
         if cardShouldBeActive(C) and not C.active then
@@ -254,17 +290,20 @@ function Bot._updatePlaying()
             if M.VL == 2 then
                 for i = 1, 4 do
                     C:setActive(false)
+                    Bot.actions = Bot.actions + 1
                     Bot._schedule(Bot.delay / 2)
                     return
                 end
             elseif M.VL == 1 then
                 for i = 1, 2 do
                     C:setActive(false)
+                    Bot.actions = Bot.actions + 1
                     Bot._schedule(Bot.delay / 2)
                     return
                 end
             else
                 C:setActive(false)
+                Bot.actions = Bot.actions + 1
             end
             Bot._schedule()
             return
@@ -286,11 +325,13 @@ function Bot._updatePlaying()
                 if M.VL == 2 then
                     for i = 1, 4 do
                         C:setActive(false)
+                        Bot.actions = Bot.actions + 1
                         Bot._schedule(Bot.delay / 2)
                         return
                     end
                 else
                     C:setActive(false)
+                    Bot.actions = Bot.actions + 1
                 end
                 Bot._schedule()
                 return
@@ -319,11 +360,13 @@ function Bot._updatePlaying()
     if M.VL == 2 and GAME.isUltraRun then
         for i = 1, 4 do
             GAME.commit()
+            Bot.actions = Bot.actions + 1
             Bot._schedule(Bot.delay / 2)
             return
         end
     else
         GAME.commit()
+        Bot.actions = Bot.actions + 1
     end
     Bot._schedule(.26)
 end
