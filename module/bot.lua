@@ -93,10 +93,12 @@ function Bot.update(dt)
         if not game_stats then
             game_stats = true
         end
-        if Bot.actions / GAME.time < 30 then
-            if last_sound > CONF.sfx then
-                love.keypressed('f3')
-                love.keyreleased('f3')
+        if Bot.enabled then
+            if Bot.actions / GAME.time < 30 then
+                if last_sound > CONF.sfx then
+                    love.keypressed('f3')
+                    love.keyreleased('f3')
+                end
             end
         end
     else
