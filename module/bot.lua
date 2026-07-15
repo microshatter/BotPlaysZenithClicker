@@ -23,6 +23,7 @@ local CD = Cards
 local TABLE = TABLE
 local game_stats = GAME.playing
 local last_sound = CONF.sfx
+local max_aps_check = 15
 
 local function applyCombo(set)
     local changed
@@ -94,7 +95,7 @@ function Bot.update(dt)
             game_stats = true
         end
         if Bot.enabled then
-            if Bot.actions / GAME.time < 30 then
+            if Bot.actions / GAME.time < max_aps_check then
                 if last_sound > CONF.sfx then
                     love.keypressed('f3')
                     love.keyreleased('f3')
@@ -133,7 +134,7 @@ function Bot.update(dt)
             Bot.t2 = 0
         end
         Bot._updatePlaying()
-        if Bot.actions / GAME.time > 30 then
+        if Bot.actions / GAME.time > max_aps_check then
             if CONF.sfx > 0 then
                 MSG('warn', "Bot is acting too fast! Turning off sfx")
                 love.keypressed('f3')
