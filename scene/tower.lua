@@ -451,7 +451,7 @@ function scene.update(dt)
     end
     Bot.update(dt)
     if GAME.playing then
-        scene.widgetList.apm._text:set(string.format("%.3f", Bot.actions / GAME.time))
+        scene.widgetList.aps._text:set(string.format("%.3f", Bot.actions / GAME.time))
     end
     if GAME.playing and (KBisDown('escape') or MSisDown(3)) then
         GAME.forfeitTimer = GAME.forfeitTimer +
@@ -1733,7 +1733,7 @@ scene.widgetList = {
         onClick = function() love.keyreleased('`') end,
     },
     WIDGET.new {
-        name = 'apm', type = 'hint',
+        name = 'aps', type = 'hint',
         pos = { 0, 0 }, x = 60, y = 500, w = 160, h = 60,
         color = { COLOR.HEX '1F4E2C' },
         textColor = { COLOR.HEX '73E284' },
