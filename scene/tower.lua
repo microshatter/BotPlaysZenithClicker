@@ -1738,9 +1738,7 @@ scene.widgetList = {
         color = { COLOR.HEX '1F4E2C' },
         textColor = { COLOR.HEX '73E284' },
         sound_hover = 'menutap',
-        fontSize = 30, text = string.format("%.3f", Bot.actions / GAME.time),
-        -- onPress = function() love.keypressed('tab') end,
-        -- onClick = function() love.keyreleased('tab') end,
+        fontSize = 30, text = "--.---",
     },
     WIDGET.new {
         name = 'chnl', type = 'button',
