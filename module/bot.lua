@@ -6,8 +6,8 @@
 local Bot = {
     enabled = false,
     busy = false,
-    -- delay = .15,
-    delay = 0,
+    delay = .15,
+    -- delay = 0,
     timer = 0,
     t2 = 0,
     playing = false,
