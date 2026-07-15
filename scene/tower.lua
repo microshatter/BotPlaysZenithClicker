@@ -1738,6 +1738,7 @@ scene.widgetList = {
         color = { COLOR.HEX '1F4E2C' },
         textColor = { COLOR.HEX '73E284' },
         sound_hover = 'menutap',
+        floatText = "Actiions per seconds",
         fontSize = 30, text = "--.---",
     },
     WIDGET.new {
