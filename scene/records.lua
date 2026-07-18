@@ -5,13 +5,13 @@ local max, min = math.max, math.min
 local clamp = MATH.clamp
 
 local clr = {
-    D = { COLOR.HEX '19311EFF' },
-    L = { COLOR.HEX '4DA667FF' },
-    T = { COLOR.HEX '9ED499FF' },
-    cbFill = { COLOR.HEX '0B170EFF' },
-    cbFrame = { COLOR.HEX '6AA782FF' },
-    btn1 = { COLOR.HEX '1F4E2CFF' },
-    btn2 = { COLOR.HEX '73E284FF' },
+    D = { CLR.HEX '19311EFF' },
+    L = { CLR.HEX '4DA667FF' },
+    T = { CLR.HEX '9ED499FF' },
+    cbFill = { CLR.HEX '0B170EFF' },
+    cbFrame = { CLR.HEX '6AA782FF' },
+    btn1 = { CLR.HEX '1F4E2CFF' },
+    btn2 = { CLR.HEX '73E284FF' },
 }
 local colorRev = false
 
@@ -646,9 +646,9 @@ widgetSet.mod = {}
 for i = 1, #CD do
     table.insert(widgetSet.mod, WIDGET.new {
         type = 'checkBox',
-        fillColor = { COLOR.lerp(MD.color[cardIDs[i]], COLOR.DD, .8) },
-        frameColor = { COLOR.lerp(MD.color[cardIDs[i]], COLOR.DD, .26) },
-        textColor = { COLOR.lerp(MD.textColor[cardIDs[i]], COLOR.LL, .26) },
+        fillColor = { COLOR.lerp(MD.color[cardIDs[i]], CLR.K, .8) },
+        frameColor = { COLOR.lerp(MD.color[cardIDs[i]], CLR.K, .26) },
+        textColor = { COLOR.lerp(MD.textColor[cardIDs[i]], CLR.W, .26) },
         text = cardIDs[i], sound_off = false, sound_on = false,
         x = baseX - 60 + 100 * i, y = baseY + 100,
         disp = function() return set.sel[i] > 0 end,

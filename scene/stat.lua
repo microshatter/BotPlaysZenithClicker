@@ -9,9 +9,9 @@ local floor = math.floor
 
 local baseColor = { .12, .26, .14 }
 local areaColor = { .12, .23, .12 }
-local titleColor = { COLOR.HEX("16582D") }
-local textColor = { COLOR.HEX("54B06D") }
-local scoreColor = { COLOR.HEX("B0FFC0") }
+local titleColor = { CLR.HEX("16582D") }
+local textColor = { CLR.HEX("54B06D") }
+local scoreColor = { CLR.HEX("B0FFC0") }
 local setup = { stencil = true, card }
 
 local sawMap = {
@@ -99,7 +99,7 @@ function RefreshProfile()
 
     -- X
     FONT.set(30)
-    GC.setColor(COLOR.DL)
+    GC.setColor(CLR.DL)
     GC.print("CLOSE", 1068 - 10, 45 - 3, 0, 1.2)
 
     -- PFP
@@ -114,7 +114,7 @@ function RefreshProfile()
     FONT.set(30)
     GC.print(("Joined " .. STAT.joinDate):upper(), 165, 96, 0, .7)
     FONT.set(50)
-    GC.setColor(COLOR.L)
+    GC.setColor(CLR.L)
     GC.print(STAT.uid, 165, 18, 0, 1.2)
 
     -- Time
