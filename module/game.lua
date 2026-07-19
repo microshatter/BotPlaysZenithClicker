@@ -369,10 +369,9 @@ function GAME.getComboName(list, mode)
                 ins(fstr, i, { MATH.rand(.872, 1), MATH.rand(.872, 1), MATH.rand(.872, 1) })
             end
             if M.IN == 0 then
-                local colors = {}
-                for i = 1, #list do ins(colors, MD.color[list[i]]) end
-                if #colors == 1 then
+                if #list == 1 then
                     -- Single color
+                    local colors = { MD.color[list[1]] }
                     for i = 1, #fstr, 2 do
                         local org = fstr[i]
                         org[1] = expApproach(org[1], colors[1][1], .5)
@@ -381,7 +380,19 @@ function GAME.getComboName(list, mode)
                     end
                 else
                     -- Multiple colors
-                    colors = TABLE.transposeNew(TABLE.shuffle(colors))
+                    local colors = TABLE.copy(list)
+                    for _ = 1, 12 do
+                        TABLE.shuffle(colors)
+                        local confusingPair
+                        for i = 1, #colors - 1 do
+                            if abs(MD.colorEq[colors[i]] - MD.colorEq[colors[i + 1]]) <= 5 then
+                                confusingPair = true
+                            end
+                        end
+                        if not confusingPair then break end
+                    end
+                    for i = 1, #list do colors[i] = MD.color[colors[i]] end
+                    colors = TABLE.transposeNew(colors)
                     local colorCnt = #colors[1]
                     local keep = clamp(#fstr / colorCnt * .05, .2, .6)
                     for i = 1, #fstr, 2 do
@@ -996,17 +1007,17 @@ function GAME.showFloorText(f, name, duration)
     TEXT:add {
         text = "Floor",
         x = 160, y = 305, k = 1, fontSize = 50,
-        color = CLR.l6YSS, duration = duration,
+        color = CLR.l5YSS, duration = duration,
     }
     TEXT:add {
         text = tostring(f),
         x = 240, y = 295, k = 1.1, fontSize = 70,
-        color = CLR.l6YSS, duration = duration, align = 'left',
+        color = CLR.l5YSS, duration = duration, align = 'left',
     }
     TEXT:add {
         text = name,
         x = 200, y = 360, k = 1, fontSize = 30,
-        color = CLR.l6YSS, duration = duration,
+        color = CLR.l5YSS, duration = duration,
     }
 end
 
@@ -2632,7 +2643,7 @@ function GAME.finish(reason)
                 else
                     t = (GAME.anyUltra and "U-" or GAME.anyRev and "R-" or "") .. (#hand == 1 and "MOD" or "COMBO") .. " MASTERED"
                     size = 2.26
-                    color = CLR.l6CS
+                    color = CLR.l5CbS
                     duration = 6.2
                 end
                 TEXT:add {
