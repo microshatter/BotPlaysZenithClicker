@@ -1,3 +1,5 @@
+require 'module/bot'
+
 local next = next
 local max, min = math.max, math.min
 local sin, cos = math.sin, math.cos
@@ -196,6 +198,8 @@ local function keyTrigger(key)
             local W = scene.widgetList.about
             W._pressTime = W._pressTimeMax * 2
             W._hoverTime = W._hoverTimeMax
+        elseif key == 'f6' then
+            Bot.toggle()
         end
     end
 end
@@ -444,6 +448,10 @@ function scene.update(dt)
 
     for i = 1, #Cards do
         Cards[i]:update(GAME.slowmo and dt / 6.26 or dt)
+    end
+    Bot.update(dt)
+    if GAME.playing then
+        scene.widgetList.aps._text:set(string.format("%.3f", Bot.actions / GAME.time))
     end
     if GAME.playing and (KBisDown('escape') or MSisDown(3)) then
         GAME.forfeitTimer = GAME.forfeitTimer +
@@ -1726,6 +1734,15 @@ scene.widgetList = {
         onClick = function() love.keyreleased('`') end,
     },
     WIDGET.new {
+        name = 'aps', type = 'hint',
+        pos = { 0, 0 }, x = 60, y = 500, w = 160, h = 60,
+        color = { COLOR.HEX '1F4E2C' },
+        textColor = { COLOR.HEX '73E284' },
+        sound_hover = 'menutap',
+        floatText = "Actions per seconds",
+        fontSize = 30, text = "--.---",
+    },
+    WIDGET.new {
         name = 'chnl', type = 'button',
         pos = { 0, 0 }, x = 60, y = 320, w = 160, h = 60,
         color = { CLR.HEX '1F4E2C' },
@@ -1754,6 +1771,16 @@ scene.widgetList = {
         fontSize = 30, text = "ABOUT ",
         onPress = function() love.keypressed('f2') end,
         onClick = function() love.keyreleased('f2') end,
+    },
+    WIDGET.new {
+        name = 'bot', type = 'button',
+        pos = { 1, 0 }, x = -60, y = 410, w = 160, h = 60,
+        color = { COLOR.HEX '383838' },
+        textColor = { COLOR.HEX '909090' },
+        sound_hover = 'menutap',
+        fontSize = 30, text = "BOT ",
+        onPress = function() Bot.toggle() end,
+        -- onClick = function() Bot.toggle() end,
     },
     WIDGET.new {
         name = 'start', type = 'button',

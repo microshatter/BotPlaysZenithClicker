@@ -2623,10 +2623,6 @@ function GAME.finish(reason)
                 end
             end
         end
-        if Daily.needSubmit then
-            CurlRequest('submit')
-            Daily.needSubmit = false
-        end
 
         -- Best
         local hand = GAME.getHand(true)
