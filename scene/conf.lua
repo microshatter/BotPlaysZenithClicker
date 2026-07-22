@@ -37,7 +37,6 @@ local songList = {
     f8 = "Dr Ocelot - Chrono Flux",
     f9 = "Dr Ocelot - Broken Record",
     f10 = "petrtech - Deified Validation",
-    tera = "Dr Ocelot - Schnellfeuer BULLET",
 
     f0r = "Dr Ocelot - Awaiting Judgement",
     f1r = "Dr Ocelot - Desecrated Ruins",
@@ -50,15 +49,20 @@ local songList = {
     f8r = "Dr Ocelot - Futile Ambition",
     f9r = "Dr Ocelot - Mere Sacrifices",
     f10r = "petrtech - Pseudo-Apotheosis",
-    terar = "Dr Ocelot - Kugelhagel OVERDRIVE",
 
+    tera = "Dr Ocelot - Schnellfeuer BULLET",
+    terar = "Dr Ocelot - Kugelhagel OVERDRIVE",
     fomg = "Ronezkj15 - Strained Endurance",
+    fomgr = "Ronezkj15 - Malevolent Blasphemy",
+    b6 = "MrshimJSK - F6 Rejected Demo Remix", -- TODO
+
     f0_EX = "Dr Ocelot - Watchful Eye (EX)",
     f0r_EX = "Dr Ocelot - Awaiting Judgement (EX)",
     f1_EX = "Dr Ocelot - Infernal Registration",
     f1r_EX = "Dr Ocelot - Desecrated Ruins (EX)",
 }
 local bgmColors = {
+    f0 = { CLR.HEX '8C2B15' },
     f1 = { CLR.HEX 'E46A24' },
     f2 = { CLR.HEX 'F1CC80' },
     f3 = { CLR.HEX '804200' },
@@ -69,6 +73,7 @@ local bgmColors = {
     f8 = { CLR.HEX 'F16A77' },
     f9 = { CLR.HEX '3DA878' },
     f10 = { CLR.HEX 'AD80F5' },
+    f0r = { CLR.HEX '8C2B15' },
     f1r = { CLR.HEX 'E46A24' },
     f2r = { CLR.HEX 'F1CC80' },
     f3r = { CLR.HEX '804200' },
@@ -80,11 +85,11 @@ local bgmColors = {
     f9r = { CLR.HEX '3DA878' },
     f10r = { CLR.HEX 'AD80F5' },
 
-    f0 = { CLR.HEX '8C2B15' },
-    f0r = { CLR.HEX '8C2B15' },
     tera = { CLR.HEX 'C0C0C0' },
     terar = { CLR.HEX 'C0C0C0' },
     fomg = { CLR.HEX '004C89' },
+    fomgr = { CLR.HEX '2519A8' },
+    b6 = { CLR.HEX '6E5D4AFF' },
 }
 local bgmHeight = {
     [0] = Floors[0].top,
@@ -1066,7 +1071,7 @@ local function albumBtn(param)
 end
 for i = 0, 10 do
     albumBtn {
-        x = baseX + 75 + 75 * i, y = baseY + 450,
+        x = baseX + 75 + 75 * i, y = baseY + 410,
         color = bgmColors['f' .. i],
         text = "" .. i,
         onClick = function()
@@ -1078,7 +1083,7 @@ for i = 0, 10 do
         end,
     }
     albumBtn {
-        x = baseX + 75 + 75 * i, y = baseY + 530,
+        x = baseX + 75 + 75 * i, y = baseY + 490,
         color = bgmColors['f' .. i .. 'r'],
         text = "R" .. i,
         onClick = function()
@@ -1089,33 +1094,42 @@ for i = 0, 10 do
     }
 end
 albumBtn {
-    x = baseX + 450 - 200, y = baseY + 690, w = 120,
+    x = baseX + 450 - 140, y = baseY + 610, w = 120,
     color = bgmColors.tera,
     text = "TERA",
-    onClick = function()
-        PlayBGM('tera')
-    end,
+    onClick = function() PlayBGM('tera') end,
     visibleFunc = function() return page == 3 and ACHV.blazing_speed end,
 }
 albumBtn {
-    x = baseX + 450, y = baseY + 690, w = 120,
+    x = baseX + 450 + 140, y = baseY + 610, w = 120,
+    color = bgmColors.terar,
+    text = "TERAR",
+    onClick = function() PlayBGM('terar') end,
+    visibleFunc = function() return page == 3 and ACHV.blazing_speed and BEST.highScore.rEX >= Floors[9].top end,
+}
+albumBtn {
+    x = baseX + 450, y = baseY + 610, w = 120,
     color = bgmColors.fomg,
     fontSize = 50,
     text = "FΩ",
-    onClick = function()
-        GAME.height = 6200
-        PlayBGM('fomg')
-    end,
+    onClick = function() GAME.height = PlayBGM('fomg') or 6200 end,
     visibleFunc = function() return page == 3 and STAT.maxHeight >= 6200 end,
 }
 albumBtn {
-    x = baseX + 450 + 200, y = baseY + 690, w = 120,
-    color = bgmColors.terar,
-    text = "TERAR",
-    onClick = function()
-        PlayBGM('terar')
-    end,
-    visibleFunc = function() return page == 3 and ACHV.blazing_speed and BEST.highScore.rEX >= Floors[9].top end,
+    x = baseX + 450, y = baseY + 610 + 140, w = 120,
+    color = bgmColors.fomgr,
+    fontSize = 50,
+    text = "FΩR",
+    onClick = function() GAME.height = PlayBGM('fomgr') or 6200 end,
+    visibleFunc = function() return page == 3 and STAT.clicker and GetClickerLv() >= 3 end,
+}
+albumBtn {
+    x = baseX + 840, y = baseY + 770, w = 80,
+    color = bgmColors.b6,
+    fontSize = 30,
+    text = "6?",
+    onClick = function() GAME.height = PlayBGM('b6') or -bgmHeight[6] end,
+    visibleFunc = function() return page == 3 and STAT.clicker end,
 }
 
 local function newTabBtn(text, y, key)

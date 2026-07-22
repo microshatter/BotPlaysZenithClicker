@@ -1303,7 +1303,11 @@ function GAME.downFloor()
     SFX.play('zenith_levelup_' .. ({ 'c', 'b', 'a', 'fsharp', 'e', GAME.anyRev and 'g' or 'a', 'ahalfsharp', 'e', 'e', 'a' })[GAME.floor])
 
     GAME.refreshRPC()
-    PlayBGM('f' .. GAME.negFloor)
+    if GAME.negFloor == 4 then
+        PlayBGM('b6')
+    elseif GAME.negFloor >= 7 then
+        PlayBGM('f' .. GAME.negFloor)
+    end
 end
 
 function GAME.nextNegEvent()
