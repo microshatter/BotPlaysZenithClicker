@@ -13,8 +13,11 @@ local Bot = {
     playing = false,
     is_waiting = false,
     actions = 0,
+    is_reset = false
 }
 _G.Bot = Bot
+
+math.randomseed(os.time())
 
 local max = math.max
 local GAME = GAME
@@ -24,6 +27,22 @@ local TABLE = TABLE
 local game_stats = GAME.playing
 local last_sound = CONF.sfx
 local max_aps_check = 15
+local next_mod_set = {}
+
+function select_random_mods()
+    local mods = { "EX", "NH", "MS", "GV", "VL", "DH", "IN", "AS", "DP" }
+    local selected = {}
+    local count = math.random(0, 9)
+    for i = 1, count do
+        local idx = math.random(1, #mods)
+        local mod = table.remove(mods, idx)
+        if math.random(1, 2) == 2 then
+            mod = 'r' .. mod
+        end
+        table.insert(selected, mod)
+    end
+    return selected
+end
 
 local function applyCombo(set)
     local changed
@@ -82,6 +101,7 @@ function Bot.toggle()
         SFX.play('menuback')
         MSG('dark', "BOT DISENGAGED", 2.6)
         Bot.playing = false
+        Bot.is_reset = false
         if last_sound ~= CONF.sfx then
             love.keypressed('f3')
             love.keyreleased('f3')
@@ -147,6 +167,8 @@ function Bot.update(dt)
             if URM then
                 toggleUltra()
             end
+            next_mod_set = select_random_mods()
+            Bot.is_reset = false
             MSG('dark', "Next game in 10 seconds", 5)
             Bot._game_wait(10)
         end
@@ -219,38 +241,29 @@ function Bot._updateMenu()
     end
 
     local q1 = GAME.quests[1].combo
-    -- applyCombo(q1)
-
-    -- 1. Activate required cards
     for _, id in ipairs(q1) do
-        if M[id] == 0 then
-            local C = findCard(id)
-            if C and not C.lock then
-                C:setActive(true, math.random(1, 2))
-                Bot._schedule()
-                return
+        MSG('dark', "Quest 1 requires card: " .. id, 3)
+    end
+
+    -- 1. deselect all selected cards
+    if not Bot.is_reset then
+        for _, C in ipairs(CD) do
+            if C.active then
+                C:setActive(true)
             end
         end
+        Bot.is_reset = true
     end
 
-    -- 2. De-activate cards not in the quest
-    for _, C in ipairs(CD) do
-        if C.active and not TABLE.find(q1, C.id) then
-            C:setActive(true, 1)
-            Bot._schedule()
-            return
-        end
-    end
+    -- 2. Activate required cards
+    applyCombo(next_mod_set)
 
-    -- 3. All set – start the run
-    if allSelected(q1) then
-        Bot._schedule(.42)
-        if math.random() < .25 and not URM then
-            toggleUltra()
-        end
-        GAME.start()
-        Bot.actions = 0
+    -- 3. start the run
+    if math.random() < .25 and not URM then
+        toggleUltra()
     end
+    GAME.start()
+    Bot.actions = 0
 end
 
 -- ── In-game phase ─────────────────────────────
