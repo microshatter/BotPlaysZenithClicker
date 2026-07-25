@@ -291,14 +291,14 @@ function Bot._updatePlaying()
     -- 1. Activate required cards that aren't flipped yet (with 1 % misclick)
     for _, C in ipairs(CD) do
         if cardShouldBeActive(C) and not C.active then
-            -- if misroll() then
-            --     local wrong = randomCardNotIn({ C.id })
-            --     if wrong and not cardShouldBeActive(wrong) then
-            --         wrong:setActive(true)
-            --         Bot._schedule()
-            --         return
-            --     end
-            -- end
+            if misroll() then
+                local wrong = randomCardNotIn({ C.id })
+                if wrong and not cardShouldBeActive(wrong) then
+                    wrong:setActive(false)
+                    Bot._schedule()
+                    return
+                end
+            end
             if not GAME.playing then
                 return
             end
@@ -356,6 +356,7 @@ function Bot._updatePlaying()
     end
 
     -- 3. If AS is active and a required card has a burn, wait for burn to clear
+    -- Creator notice: THAT'S NOT HOW THIS MECHANIC WORKS, AI!
     -- if M.AS == 1 then
     --     for _, C in ipairs(CD) do
     --         if not GAME.playing then
@@ -369,7 +370,7 @@ function Bot._updatePlaying()
     -- end
 
     -- 4. Commit when everything is ready
-    --
+    
     if not GAME.playing then
         return
     end
