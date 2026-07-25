@@ -328,30 +328,28 @@ function Bot._updatePlaying()
 
     -- 2. De-activate cards that are active but NOT needed (unless NH prevents it)
     --    (bot uses auto=true, bypassing the in-game NH lock, so this always works)
-    if M.NH ~= 1 then
-        for _, C in ipairs(CD) do
-            if not GAME.playing then
-                return
+    for _, C in ipairs(CD) do
+        if not GAME.playing then
+            return
+        end
+        if C.active and not cardShouldBeActive(C) then
+            if M.NH == 1 then
+                love.keypressed('z')
+                love.keyreleased('z')
             end
-            if C.active and not cardShouldBeActive(C) then
-                -- if misroll() then
-                --     Bot._schedule()
-                --     return
-                -- end
-                if M.VL == 2 then
-                    for i = 1, 4 do
-                        C:setActive(false)
-                        Bot.actions = Bot.actions + 1
-                        Bot._schedule(Bot.delay / 2)
-                        return
-                    end
-                else
+            if M.VL == 2 then
+                for i = 1, 4 do
                     C:setActive(false)
                     Bot.actions = Bot.actions + 1
+                    Bot._schedule(Bot.delay / 2)
+                    return
                 end
-                Bot._schedule()
-                return
+            else
+                C:setActive(false)
+                Bot.actions = Bot.actions + 1
             end
+            Bot._schedule()
+            return
         end
     end
 
