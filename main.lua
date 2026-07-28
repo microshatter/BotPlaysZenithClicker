@@ -2,6 +2,49 @@ love.window.setIcon(love.image.newImageData('assets/icon.png'))
 love.mouse.setVisible(false)
 
 require 'Zenitha'
+local json = require 'json'
+client = require("websocket").new("localhost", 8080, "/_ws")
+function client:onmessage(message)
+    local data = json.decode(message)
+    if data.type == 'attack' then
+        local damage = data.damage
+        local attacker = data.attacker
+        local name = data.name
+        LOG("info", name .. " has attacked you by " .. damage .. " damage!")
+        if GAME.playing then
+            if GAME.mod.DP > 0 then
+                local k = GAME.getLifeKey(true)
+                if GAME[k] > 0 then
+                    GAME.takeDamage((damage / 5) / 2, 'time', false)
+                    GAME.takeDamage((damage / 5) / 2, 'time', true)
+                else
+                    GAME.takeDamage((damage / 5), 'time', false)
+                end
+            else
+                GAME.takeDamage(damage / 5, 'time', false)
+            end
+            if GAME.playing then
+                MSG("info", name .. " has attacked you by " .. damage .. " damage!")
+            else
+                MSG("error", "YOU WERE KO'd By " .. name .. " WITH " .. damage .. " DAMAGE!", 10)
+            end
+        else
+            MSG("dark", "Nullified " .. damage .. " damage from " .. name)
+        end
+    elseif data.type == 'ko' then
+        local id = data.id
+        local name = data.name
+        MSG('dark', "You KO'd " .. name)
+        GAME.awardKO(STAT.uid, name, true, true)
+    end
+end
+function client:onopen()
+    self:send('{"type": "set_name", "value": "[BOT]Zenith Clicker"}')
+end
+function client:onclose(code, reason)
+    MSG("warn", "closecode: " .. code .. ", reason: " .. reason)
+    client.new("localhost", 3000, "/_ws")
+end
 for k, v in next, {
     DR = 'd4RS', dR = 'd1RS', R = 'l2RS', lR = 'l4RS', LR = 'l5RS',
     DF = 'd4RyS', dF = 'd1RyS', F = 'l2RyS', lF = 'l4RyS', LF = 'l5RyS',

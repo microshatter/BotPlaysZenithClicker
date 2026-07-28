@@ -2125,6 +2125,7 @@ function GAME.commit(auto)
         end
 
         GAME.incrementPrompt('send', attack)
+        client:send('{"type": "attack", "damage": '  .. attack .. '}')
         GAME.totalAttack = GAME.totalAttack + attack
         GAME.totalSurge = GAME.totalSurge + surge
 

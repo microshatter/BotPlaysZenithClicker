@@ -1,4 +1,5 @@
 require 'module/bot'
+local playing = false
 
 local next = next
 local max, min = math.max, math.min
@@ -450,6 +451,19 @@ function scene.update(dt)
         Cards[i]:update(GAME.slowmo and dt / 6.26 or dt)
     end
     Bot.update(dt)
+    client:update()
+    if GAME.playing then
+        if not playing then
+            playing = true
+            client:send('{"type": "join"}')
+        end
+    else
+        if playing then
+            playing = false
+            client:send('{"type": "ko"}')
+            client:send('{"type": "spectate"}')
+        end
+    end
     if GAME.playing then
         scene.widgetList.aps._text:set(string.format("%.3f", Bot.actions / GAME.time))
     end
