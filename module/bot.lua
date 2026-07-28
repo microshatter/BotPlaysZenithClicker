@@ -336,6 +336,11 @@ function Bot._updatePlaying()
             if M.NH == 1 then
                 love.keypressed('z')
                 love.keyreleased('z')
+                if M.AS >= 1 then
+                    -- AS active card resets takes longer than usual
+                    Bot._schedule(1.5)
+                    return
+                end
             end
             if M.VL == 2 then
                 for i = 1, 4 do
