@@ -595,20 +595,15 @@ function GAME.cancelBurn()
     for i = 1, #CD do CD[i].burn = false end
 end
 
+local function sortComp(a, b) return a.initOrder < b.initOrder end
 function GAME.sortCards()
-    table.sort(CD, function(a, b) return a.initOrder < b.initOrder end)
+    table.sort(CD, sortComp)
     for _, C in ipairs(CD) do C.tempOrder = C.initOrder end
 end
 
-local shuffleSets = {
-    [0] = { { 2, 3 }, { 4, 5 }, { 5, 6 }, { 7, 8 }, pop = 3 },
-    { { 1, 2 },    { 3, 4 },    { 6, 7 },    { 8, 9 },    pop = 2 },
-    { { 1, 2 },    { 3, 4 },    { 6, 7 },    { 8, 9 },    pop = 1 },
-    { { 1, 3 },    { 2, 4 },    { 6, 8 },    { 7, 9 },    pop = 1 },
-    { { 1, 2, 3 }, { 7, 8, 9 }, { 5, 6, 7 }, { 3, 4, 5 }, pop = 0 },
-}
+local function shuffleComp(a, b) return a.tempOrder < b.tempOrder end
 function GAME.weakShuffleCards(phase)
-    local sets = TABLE.copyAll(shuffleSets[phase] or shuffleSets[4])
+    local sets = TABLE.copyAll(MessinessShuffleSets[phase] or MessinessShuffleSets[4])
     for _ = 1, sets.pop do
         TABLE.popRandom(sets)
     end
@@ -617,7 +612,7 @@ function GAME.weakShuffleCards(phase)
         local a, b = TABLE.popRandom(sets[i]), TABLE.popRandom(sets[i])
         CD[a].tempOrder, CD[b].tempOrder = CD[b].tempOrder, CD[a].tempOrder
     end
-    table.sort(CD, function(a, b) return a.tempOrder < b.tempOrder end)
+    table.sort(CD, shuffleComp)
     GAME.refreshLayout()
 end
 
@@ -625,19 +620,25 @@ function GAME.shuffleCards(messiness)
     local order = {}
     for i = 1, #CD do order[i] = i end
 
+    local attemptCnt = 0
     repeat
+        -- Random swap x3
         for _ = 1, 3 do
             local p = rnd(#CD - 1)
             order[p], order[p + 1] = order[p + 1], order[p]
         end
 
+        -- Calculate total distance
         local totalDist = 0
         for i = 1, #order do
-            CD[i].tempOrder = order[i]
             totalDist = totalDist + abs(order[i] - CD[i].initOrder) ^ 1.6
         end
-    until totalDist >= messiness
-    table.sort(CD, function(a, b) return a.tempOrder < b.tempOrder end)
+        attemptCnt = attemptCnt + 1
+    until totalDist >= messiness or attemptCnt >= 26
+
+    -- Actual shuffling
+    for i = 1, #order do CD[i].tempOrder = order[i] end
+    table.sort(CD, shuffleComp)
 
     GAME.refreshLayout()
 end
@@ -1757,6 +1758,8 @@ function GAME.task_cancelAll(instant)
     end
 end
 
+local uMS_temp = {}
+local uMS_CDsnapshot = {}
 function GAME.commit(auto)
     if #GAME.quests == 0 then return end
 
@@ -2133,18 +2136,45 @@ function GAME.commit(auto)
         if attack > 0 then GAME.addHeight(attack * GAME.attackMul, false, oldAllyHP > 0) end
         GAME.addXP(attack + xp)
 
-        -- rMS little shuffle
+        -- rMS shuffle
         if M.MS == 2 then
+            local lastPos = GAME.lastFlip and TABLE.find(CD, CD[GAME.lastFlip]) or -26
             if URM then
-                GAME.readyShuffle(max(GAME.floor, GAME.negFloor) * 2.6, true)
-            else
-                local lastPos = -26
-                for i = 1, #CD do
-                    if CD[i].id == GAME.lastFlip then
-                        lastPos = i
-                        break
+                for i = 1, #CD do uMS_CDsnapshot[i] = CD[i] end
+                local f = max(GAME.floor, GAME.negFloor)
+                local messiness_expected = 3 + 2 * f
+                local maxUnmoved = UltraMessinessMaxUnmoved[f]
+                local cnt = 0
+                repeat
+                    if lastPos > 1 + 1 then
+                        TABLE.clear(uMS_temp)
+                        for i = 1, lastPos - 1 do uMS_temp[i] = CD[i] end
+                        TABLE.shuffle(uMS_temp)
+                        for i = 1, #uMS_temp do CD[i] = uMS_temp[i] end
                     end
-                end
+                    if lastPos < #CD - 1 then
+                        TABLE.clear(uMS_temp)
+                        for i = lastPos + 1, #CD do uMS_temp[i - lastPos] = CD[i] end
+                        TABLE.shuffle(uMS_temp)
+                        for i = lastPos + 1, #CD do CD[i] = uMS_temp[i - lastPos] end
+                    end
+
+                    cnt = cnt + 1
+                    local unmoveCnt = 0
+                    for i = 1, #uMS_CDsnapshot do
+                        if uMS_CDsnapshot[i] == CD[i] then
+                            unmoveCnt = unmoveCnt + 1
+                        end
+                    end
+                    if unmoveCnt <= maxUnmoved then
+                        local totalDist = 0
+                        for i = 1, #CD do
+                            totalDist = totalDist + abs(i - TABLE.find(CD, uMS_CDsnapshot[i]))
+                        end
+                        if abs(totalDist - messiness_expected) <= 5 + cnt / 26 then break end
+                    end
+                until cnt >= 126
+            else
                 local w = max(GAME.floor, GAME.negFloor) <= 8 and 2 or 3
                 local r
                 repeat r = rnd(#CD - w + 1) until r > lastPos + 1 or r + w < lastPos
@@ -2250,6 +2280,8 @@ local function task_startSpin()
     end
     if M.MS == 1 then
         GAME.weakShuffleCards(0)
+    elseif URM and M.MS == 2 then
+        TABLE.shuffle(CD)
     elseif M.MS == 2 then
         GAME.shuffleCards(2.6)
     end

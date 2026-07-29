@@ -127,7 +127,7 @@ Make sure you've discovered most contents before reading this section!
 ### Loaded Dice (`rMS`)
 
 - Cards are shuffled at the start of **every floor**. This effect gets stronger for every odd-numbered floor reached, with cards straying further from their correct positions.
-- On commit, **swap two cards**, three on Floor 9/10. The cards must be within a five-card range.
+- On commit, **swap two cards**, three on Floor 9/10. But last flipped card is guaranteed not to be swapped.
 
 ### Freefall (`rGV`)
 
@@ -208,7 +208,7 @@ Ultra mods are considered as reversed mods on score, achievements, etc.
 
 ### ENTROPY （`uMS`）
 
-- The cards are shuffled every single quest!
+- Shuffle all cards at each side of the last flipped card instead of only two cards!
 
 ### COLLAPSING GALAXY （`uGV`）
 
