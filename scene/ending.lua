@@ -222,6 +222,7 @@ function scene.touchDown() touchPressing = true end
 function scene.touchUp() touchPressing = false end
 
 function scene.update(dt)
+    client:update()
     if (touchPressing or love.keyboard.isDown('space')) and t < 98.72 then
         dt = dt * 12.6
     end
