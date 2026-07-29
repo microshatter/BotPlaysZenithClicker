@@ -441,7 +441,7 @@ BgmData = {
     terar = { meta = '4|4  240 BPM  C# Minor          ', bar = 4, bpm = 240, toneFix = 1.0, loop = { 84 - 15.565, 172 - 15.565 }, teleport = { 0, 18 - 15.565 } },
     fomg  = { meta = '4|4  180 & 200 BPM  Bb Minor    ', bar = 4, bpm = 200, toneFix = -2., bpmData = { 90, 10.667, 180, 25.333, 200 }, loop = { 38.4 - 11.862, 144 - 11.862 } },
     fomgr = { meta = '4|4  184 BPM  B Minor & C Minor ', bar = 4, bpm = 184, toneFix = -1., loop = { 60 / 184 * 76, 60 / 184 * 632 } },
-    b6    = { meta = '4|4  120 BPM  G Minor           ', bar = 4, bpm = 120, toneFix = 0.0, loop = { 16, 224 } },
+    b6    = { meta = '4|4  120 BPM  G Minor           ', bar = 4, bpm = 120, toneFix = 2.0, loop = { 16, 224 } },
 }
 for _, v in next, BgmData do
     v.meta = STRING.trim(v.meta)
@@ -577,15 +577,15 @@ end
 
 function LoadSave()
     -- Fill BEST, STAT, ACHV tables with actual save data, only called after InitProfile()
-    local stat = FILE.safeLoad('stat.luaon', '-luaon')
-    if stat then
+    if FILE.exist('stat.luaon') then
+        local stat = FILE.load('stat.luaon', '-luaon')
         TABLE.update(STAT, stat)
         if not STAT.srTimer_game then
             STAT.srTimer_game, STAT.srTimer_life = STAT.totalTime, MATH.roundUnit(STAT.totalTime * 1.26, .001)
         end
     end
-    TABLE.update(BEST, FILE.safeLoad('best.luaon', '-luaon') or NONE)
-    TABLE.update(ACHV, FILE.safeLoad('achv.luaon', '-luaon') or NONE)
+    if FILE.exist('best.luaon') then TABLE.update(BEST, FILE.load('best.luaon', '-luaon')) end
+    if FILE.exist('achv.luaon') then TABLE.update(ACHV, FILE.load('achv.luaon', '-luaon')) end
 end
 
 -- Functions: Game Progress
