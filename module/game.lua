@@ -1306,7 +1306,7 @@ function GAME.downFloor()
     GAME.refreshRPC()
     if GAME.negFloor == 4 then
         PlayBGM('b6')
-    elseif GAME.negFloor >= 7 then
+    elseif GAME.negFloor >= 7 or GAME.negFloor == 2 or GAME.negFloor == 3 then
         PlayBGM('f' .. GAME.negFloor)
     end
 end
@@ -2658,10 +2658,6 @@ function GAME.finish(reason)
                     end
                 end
             end
-        end
-        if Daily.needSubmit then
-            CurlRequest('submit')
-            Daily.needSubmit = false
         end
 
         -- Best

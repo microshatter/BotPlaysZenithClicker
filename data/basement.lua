@@ -482,6 +482,9 @@ NegEvents = {
             local firstClear = not STAT.clicker
             STAT.clicker = true
             IssueSpeedrunMilestone('clicker')
+            if Bot.enabled then
+                Bot.toggle()
+            end
             SFX.play('warp')
             SCN.go('ending', "warp", firstClear)
         end
