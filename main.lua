@@ -15,8 +15,8 @@ function client:onmessage(message)
             if GAME.mod.DP > 0 then
                 local k = GAME.getLifeKey(true)
                 if GAME[k] > 0 then
-                    GAME.takeDamage((damage / 5) / 2, 'time', false)
                     GAME.takeDamage((damage / 5) / 2, 'time', true)
+                    GAME.takeDamage((damage / 5) / 2, 'time', false)
                 else
                     GAME.takeDamage((damage / 5), 'time', false)
                 end
