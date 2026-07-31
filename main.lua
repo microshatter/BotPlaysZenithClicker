@@ -24,7 +24,9 @@ function client:onmessage(message)
                 GAME.takeDamage(damage / 5, 'time', false)
             end
             if GAME.playing then
-                MSG("info", name .. " has attacked you by " .. damage .. " damage!")
+                if damage >= 20 then
+                    MSG("info", name .. " has attacked you by " .. damage .. " damage!")
+                end
             else
                 MSG("error", "YOU WERE KO'd By " .. name .. " WITH " .. damage .. " DAMAGE!", 10)
             end
