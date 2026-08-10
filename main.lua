@@ -38,6 +38,8 @@ function client:onmessage(message)
         local name = data.name
         MSG('dark', "You KO'd " .. name)
         GAME.awardKO(STAT.uid, name, true, true)
+    elseif data.type == 'error' then
+        MSG('error', "Server reported the error: " .. data.reason)
     end
 end
 function client:onopen()
