@@ -1121,7 +1121,7 @@ albumBtn {
     fontSize = 50,
     text = "FΩR",
     onClick = function() GAME.height = PlayBGM('fomgr') or 6200 end,
-    visibleFunc = function() return page == 3 and STAT.clicker and GetClickerLv() >= 3 end,
+    visibleFunc = function() return page == 3 and STAT.clicker and #GetClickerStar() >= 6 end,
 }
 albumBtn {
     x = baseX + 840, y = baseY + 770, w = 80,
@@ -1168,6 +1168,7 @@ for i = 1, #pages do
         end
     end
 end
+for _, W in next, tab do W.sound_hover = 'menutap' end
 
 scene.widgetList = {}
 for i = 1, #pages do TABLE.append(scene.widgetList, pages[i]) end

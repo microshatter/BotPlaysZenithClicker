@@ -1903,9 +1903,9 @@ function GAME.commit(auto)
                 end
                 SFX.play('clearline')
                 SFX.play(
-                    GAME.chain < 8 and 'b2bcharge_blast_1' or
-                    GAME.chain < 12 and 'b2bcharge_blast_2' or
-                    GAME.chain < 24 and 'b2bcharge_blast_3' or
+                    GAME.chain < 7 and 'b2bcharge_blast_1' or
+                    GAME.chain < 11 and 'b2bcharge_blast_2' or
+                    GAME.chain < 23 and 'b2bcharge_blast_3' or
                     'b2bcharge_blast_4'
                 )
                 if GAME.chain >= 8 then SFX.play('thunder' .. rnd(6), clampInterpolate(8, .7, 16, 1, GAME.chain)) end
@@ -2282,6 +2282,7 @@ local function task_startSpin()
         GAME.weakShuffleCards(0)
     elseif URM and M.MS == 2 then
         TABLE.shuffle(CD)
+        GAME.refreshLayout()
     elseif M.MS == 2 then
         GAME.shuffleCards(2.6)
     end
@@ -2614,30 +2615,29 @@ function GAME.finish(reason)
             end
         end
 
-        -- ZP of current run
-        local zpGain = GAME.roundHeight * GAME.comboZP
-        local str = Daily.actived and "%.0f ZP  (+%.0f, 260%%)" or "%.0f ZP  (+%.0f)"
-        TEXTS.zpChange:set(str:format(zpGain, 0))
-
-        -- Update ZP
+        -- ZP
+        local zpGain = abs(GAME.roundHeight) * GAME.comboZP
         local newZP = STAT.zp +
             zpGain *                           -- base ZP gain
             icLerp(26, 16, STAT.zp / zpGain) * -- soft cap: slow down after 16x, stop at 26x
             (Daily.actived and 2.6 or 1)       -- gain 2.6x on daily challenge
-        local zpAdd = newZP - STAT.zp
-        if zpAdd > 0 then
-            TASK.new(function()
+
+        -- ZP text animation
+        TASK.new(function()
+            local str = Daily.actived and "%.0f ZP  (+%.0f, 260%%)" or "%.0f ZP  (+%.0f)"
+            TEXTS.zpChange:set(str:format(zpGain, 0))
+
+            local zpAdd = newZP - STAT.zp
+            if zpAdd > 0 then
+                STAT.zp = newZP
+                STAT.peakZP = max(STAT.peakZP, STAT.zp)
                 TASK.yieldT(0.626)
                 TWEEN.new(function(t)
-                    local str = Daily.actived and "%.0f ZP  (+%.0f, 260%%)" or "%.0f ZP  (+%.0f)"
                     TEXTS.zpChange:set(str:format(zpGain, zpAdd * t))
                 end):setEase('InOutCubic'):setDuration(2):run()
                 SFX.play('ratingraise', zpAdd ^ .5 / 60)
-            end)
-        end
-
-        STAT.zp = newZP
-        STAT.peakZP = max(STAT.peakZP, STAT.zp)
+            end
+        end)
 
         -- Daily
         if Daily.actived then
