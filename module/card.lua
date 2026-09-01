@@ -478,33 +478,17 @@ local glassCardText = setmetatable({}, {
         return t[k]
     end
 })
--- 绕任意轴旋转点 (x,y,z)，轴 (ax,ay,az)，角度 theta（弧度）
 local function rotate_point_around_axis(x, y, z, ax, ay, az, theta)
-    -- 1. 归一化旋转轴
-    local len = math.sqrt(ax * ax + ay * ay + az * az)
-    if len < 0.0001 then return x, y, z end -- 零向量不旋转
-
+    local len = (ax * ax + ay * ay + az * az) ^ .5
     local kx, ky, kz = ax / len, ay / len, az / len
-
-    -- 2. 预计算三角函数
-    local cos_t = math.cos(theta)
-    local sin_t = math.sin(theta)
-    local one_minus_cos = 1 - cos_t
-
-    -- 3. 计算点积 (k·v)
+    local cos_t, sin_t = cos(theta), sin(theta)
     local dot = kx * x + ky * y + kz * z
 
-    -- 4. 计算叉乘 (k × v)
-    local cross_x = ky * z - kz * y
-    local cross_y = kz * x - kx * z
-    local cross_z = kx * y - ky * x
-
-    -- 5. 罗德里格公式：v_rot = v*cos + (k×v)*sin + k*(k·v)*(1-cos)
-    local rx = x * cos_t + cross_x * sin_t + kx * dot * one_minus_cos
-    local ry = y * cos_t + cross_y * sin_t + ky * dot * one_minus_cos
-    local rz = z * cos_t + cross_z * sin_t + kz * dot * one_minus_cos
-
-    return rx, ry, rz
+    -- Rodrigues' rotation formula
+    return
+        x * cos_t + (ky * z - kz * y) * sin_t + kx * dot * (1 - cos_t),
+        y * cos_t + (kz * x - kx * z) * sin_t + ky * dot * (1 - cos_t),
+        z * cos_t + (kx * y - ky * x) * sin_t + kz * dot * (1 - cos_t)
 end
 
 function Card:draw()
@@ -513,6 +497,9 @@ function Card:draw()
     local img, img2
     local rot3D = self.r_3d + self.r_3d_in
     local faceUp
+    local glassW, glassH = 480, 660
+    local finalRot = playing and self.r_2d_shake or self.r_2d_rev + self.r_2d_shake
+    local finalSize = self == CD[FloatOnCard] and M.EX > 0 and love.mouse.isDown(1, 2) and .9 * self.size or self.size
 
     -- Select texture
     if self.lock and self.lockfull then
@@ -599,174 +586,7 @@ function Card:draw()
         end
     end
 
-    gc_push('all')
-
-    gc_setCanvas(tempCanvas)
-    gc_clear()
-    gc_origin()
-    gc_translate(canvasW / 2, canvasH / 2)
-
-    -- EX scale
-    if self == CD[FloatOnCard] and M.EX > 0 and love.mouse.isDown(1, 2) then gc_scale(.9) end
-
-    if GAME.glassCard then
-        local w, h = 480, 660
-        gc_setColor((faceUp and ModData.textColor or ModData.color)[self.id])
-        gc_setAlpha((CONF.cardBrightness / 100) ^ 2 * .872)
-        gc_mRect('fill', 0, 0, w, h, 26)
-
-        gc_setColor(
-            self.burn and (
-                URM and M.AS == 2 and burnColor.uAS or
-                GAME.time % .16 < .08 and burnColor.AS1 or burnColor.AS2
-            ) or CLR.W
-        )
-
-        FONT.set(50)
-        if faceUp then
-            gc_scale(2.6)
-            gc_mDraw(glassCardText[self.id])
-            gc_scale(1 / 2.6)
-        else
-            gc_scale(2)
-            gc_mDraw(glassCardText["TETR.IO"])
-            gc_scale(1 / 2)
-        end
-
-        gc_setColor(1, 1, 1, .62)
-        gc_setLineWidth(4)
-        gc_mRect('line', 0, 0, w - 3, h - 3, 26)
-
-        -- Outline (draw)
-        if a1 then
-            gc_setLineWidth(52)
-            gc_setColor(r1, g1, b1, a1)
-            gc_mRect('line', 0, 0, w + 52, h + 52, 52)
-        end
-        if a2 then
-            gc_setLineWidth(26)
-            gc_setColor(r2, g2, b2, a2)
-            gc_mRect('line', 0, 0, w + 26, h + 26, 39)
-        end
-    else
-        -- Card
-        if not GAME.invisCard then
-            if self.burn then
-                if URM and M.AS == 2 then
-                    gc_setColor(burnColor.uAS)
-                else
-                    gc_setColor(
-                        GAME.time % .16 < .08 and
-                        (faceUp and COLOR.lR or COLOR.R) or
-                        (faceUp and COLOR.lY or COLOR.Y)
-                    )
-                end
-            else
-                local b = CONF.cardBrightness / 100
-                gc_setColor(b, b, b)
-            end
-            gc_draw(img, -img:getWidth() / 2, -img:getHeight() / 2)
-            if img2 then
-                gc_draw(img2, -img2:getWidth() / 2, -img2:getHeight() / 2)
-            end
-        end
-
-        -- Outline (draw)
-        if a1 or a2 then
-            gc_setBlendMode('alpha', 'premultiplied')
-            if a1 then
-                gc_setColor(r1, g1, b1, a1)
-                gc_draw(activeFrame, -frame1W, -frame1H)
-            end
-            if a2 then
-                gc_setColor(r2, g2, b2, a2)
-                gc_draw(activeFrame2, -frame2W, -frame2H)
-            end
-            gc_setBlendMode('alpha')
-        end
-
-        -- Menu UI
-        if not playing then
-            gc_push('transform')
-
-            -- Rev Throb
-            if not self.upright and GAME.revDeckSkin and faceUp then
-                gc_setColor(1, 1, 1, ThrobAlpha.card)
-                gc_setShader(SHADER.throb)
-                gc_draw(img, -img:getWidth() / 2, -img:getHeight() / 2)
-                gc_setShader()
-            end
-
-            -- Star
-            if completion[self.id] > 0 then
-                img = TEXTURE[self.active and (self.id == 'DP' and STAT.clicker and 'star2' or 'star1') or 'star0']
-                local t = self.upright and self.float or 1
-                local blur = (FloatOnCard == self.initOrder or not self.upright) and 0 or -.2
-                local x = lerp(155, 0, t)
-                local y = lerp(-370, -330, t)
-                local cr = lerp(60, 180, t)
-                local revMastery = completion[self.id] == 2
-                local ang = -t * 6.2832
-                -- Base star
-                if self.upright then
-                    gc_setColor(.26, .26, .26)
-                    gc_setBlendMode('add')
-                    gc_blurCircle(blur, x, y, cr)
-                    if revMastery then gc_blurCircle(blur, -x, -y, cr) end
-                    gc_setBlendMode('alpha')
-                    gc_setColor(1, 1, 1)
-                    gc_mDraw(img, x, y, ang, lerp(.16, .42, t))
-                    if revMastery then gc_mDraw(img, -x, -y, ang, lerp(.16, .42, t)) end
-                else
-                    gc_setColor(.6, .1, .1)
-                    gc_setBlendMode('add')
-                    gc_blurCircle(blur, x, y, cr)
-                    if revMastery then gc_blurCircle(blur, -x, -y, cr) end
-                    gc_setBlendMode('alpha')
-                    gc_setColor(1, .62 + .1 * sin(getTime() * 42), .26)
-                    gc_mDraw(img, x, y, ang, lerp(.16, .42, t))
-                    if revMastery then gc_mDraw(img, -x, -y, ang, lerp(.16, .42, t)) end
-                end
-                -- Float star
-                if not self.active then
-                    if revMastery then
-                        gc_setColor(.5, .5, .5, t)
-                        gc_setBlendMode('add')
-                        gc_blurCircle(blur, -x, -y, cr)
-                        gc_setBlendMode('alpha')
-                    end
-                    gc_setColor(1, 1, 1, t)
-                    local star1 = TEXTURE[self.id == 'DP' and STAT.clicker and 'star2' or 'star1']
-                    gc_mDraw(star1, x, y, ang, lerp(.16, .42, t))
-                    if revMastery then gc_mDraw(star1, -x, -y, ang, lerp(.16, .42, t)) end
-                end
-            end
-            gc_pop()
-        end
-    end
-
-    -- Icon cover
-    if faceUp then
-        gc_setColor((GAME.glassCard and ModData.color or ModData.textColor)[self.id])
-        local active = playing and self.inLastCommit or not playing and self.active
-        if M.EX == 0 then
-            if active then
-                gc_setLineWidth(6)
-                gc.polygon('line', iconFrame)
-                gc_setAlpha(.62)
-                gc.polygon('fill', iconFrame)
-            else
-                gc_setLineWidth(4)
-                gc.polygon('line', iconFrame)
-            end
-        elseif active then
-            gc_setAlpha(.62)
-            gc.polygon('fill', iconFrame)
-        end
-    end
-
-    gc_pop()
-
+    -- Calculate 3D mesh
     local f = 2600 - 20 * CONF.rot3D_focal
     local t = CONF.rot3D_tilt * .0042
     local t2 = CONF.rot3D_tilt * 20
@@ -791,9 +611,10 @@ function Card:draw()
                 local nx, ny, nz = 0, 0, 1 -- Normal vector
                 x, y, z = rotate_point_around_axis(
                     x, y, z,
-                    ny * dz - nz * dy,
-                    nz * dx - nx * dz,
-                    nx * dy - ny * dx,
+                    -dy, dx, 0, -- simplified cross product
+                    -- ny * dz - nz * dy,
+                    -- nz * dx - nx * dz,
+                    -- nx * dy - ny * dx,
                     -dist / t2
                 )
             end
@@ -802,7 +623,175 @@ function Card:draw()
         meshVertices[i][1], meshVertices[i][2] = x / (z / f + 1), y / (z / f + 1)
     end
     tempMesh:setVertices(meshVertices)
-    gc_draw(tempMesh, self.x1, self.y1, playing and self.r_2d_shake or self.r_2d_rev + self.r_2d_shake, self.size)
+
+    -- Hint layer
+    if a1 or a2 then
+        gc_push('all')
+        gc_setCanvas(tempCanvas)
+        gc_clear()
+        gc_origin()
+        gc_translate(canvasW / 2, canvasH / 2)
+
+        gc_setBlendMode('alpha', 'premultiplied')
+        if GAME.glassCard then
+            if a1 then
+                gc_setLineWidth(52)
+                gc_setColor(r1, g1, b1, a1)
+                gc_mRect('line', 0, 0, glassW + 52, glassH + 52, 52)
+            end
+            if a2 then
+                gc_setLineWidth(26)
+                gc_setColor(r2, g2, b2, a2)
+                gc_mRect('line', 0, 0, glassW + 26, glassH + 26, 39)
+            end
+        else
+            if a1 then
+                gc_setColor(r1, g1, b1, a1)
+                gc_draw(activeFrame, -frame1W, -frame1H)
+            end
+            if a2 then
+                gc_setColor(r2, g2, b2, a2)
+                gc_draw(activeFrame2, -frame2W, -frame2H)
+            end
+        end
+        gc_pop()
+        gc_draw(tempMesh, self.x1, self.y1, finalRot, finalSize)
+    end
+
+    -- Card layer
+    gc_push('all')
+    gc_setCanvas(tempCanvas)
+    gc_clear()
+    gc_origin()
+    gc_translate(canvasW / 2, canvasH / 2)
+
+    if GAME.glassCard then
+        -- Fill
+        gc_setColor((faceUp and ModData.textColor or ModData.color)[self.id])
+        gc_setAlpha((CONF.cardBrightness / 100) ^ 2 * .872)
+        gc_mRect('fill', 0, 0, glassW, glassH, 26)
+
+        -- Text
+        gc_setColor(
+            self.burn and (
+                URM and M.AS == 2 and burnColor.uAS or
+                GAME.time % .16 < .08 and burnColor.AS1 or burnColor.AS2
+            ) or CLR.W
+        )
+        FONT.set(50)
+        if faceUp then
+            gc_scale(2.6)
+            gc_mDraw(glassCardText[self.id])
+            gc_scale(1 / 2.6)
+        else
+            gc_scale(2)
+            gc_mDraw(glassCardText["TETR.IO"])
+            gc_scale(1 / 2)
+        end
+
+        -- Outline
+        gc_setColor(1, 1, 1, .62)
+        gc_setLineWidth(4)
+        gc_mRect('line', 0, 0, glassW - 3, glassH - 3, 26)
+    else
+        -- Card
+        if not GAME.invisCard then
+            if self.burn then
+                if URM and M.AS == 2 then
+                    gc_setColor(burnColor.uAS)
+                else
+                    gc_setColor(
+                        GAME.time % .16 < .08 and
+                        (faceUp and COLOR.lR or COLOR.R) or
+                        (faceUp and COLOR.lY or COLOR.Y)
+                    )
+                end
+            else
+                local b = CONF.cardBrightness / 100
+                gc_setColor(b, b, b)
+            end
+            gc_draw(img, -img:getWidth() / 2, -img:getHeight() / 2)
+            if img2 then
+                gc_draw(img2, -img2:getWidth() / 2, -img2:getHeight() / 2)
+            end
+        end
+
+        -- Rev Throb
+        if not playing and not self.upright and GAME.revDeckSkin and faceUp then
+            gc_setColor(1, 1, 1, ThrobAlpha.card)
+            gc_setShader(SHADER.throb)
+            gc_draw(img, -img:getWidth() / 2, -img:getHeight() / 2)
+            gc_setShader()
+        end
+    end
+
+    -- Star
+    if not playing and completion[self.id] > 0 then
+        img = TEXTURE[self.active and (self.id == 'DP' and STAT.clicker and 'star2' or 'star1') or 'star0']
+        local t = self.upright and self.float or 1
+        local blur = (FloatOnCard == self.initOrder or not self.upright) and 0 or -.2
+        local x = lerp(155, 0, t)
+        local y = lerp(-370, -330, t)
+        local cr = lerp(60, 180, t)
+        local revMastery = completion[self.id] == 2
+        local ang = -t * 6.2832
+        -- Base star
+        if self.upright then
+            gc_setColor(.26, .26, .26)
+            gc_setBlendMode('add')
+            gc_blurCircle(blur, x, y, cr)
+            if revMastery then gc_blurCircle(blur, -x, -y, cr) end
+            gc_setBlendMode('alpha')
+            gc_setColor(1, 1, 1)
+            gc_mDraw(img, x, y, ang, lerp(.16, .42, t))
+            if revMastery then gc_mDraw(img, -x, -y, ang, lerp(.16, .42, t)) end
+        else
+            gc_setColor(.6, .1, .1)
+            gc_setBlendMode('add')
+            gc_blurCircle(blur, x, y, cr)
+            if revMastery then gc_blurCircle(blur, -x, -y, cr) end
+            gc_setBlendMode('alpha')
+            gc_setColor(1, .62 + .1 * sin(getTime() * 42), .26)
+            gc_mDraw(img, x, y, ang, lerp(.16, .42, t))
+            if revMastery then gc_mDraw(img, -x, -y, ang, lerp(.16, .42, t)) end
+        end
+        -- Float star
+        if not self.active then
+            if revMastery then
+                gc_setColor(.5, .5, .5, t)
+                gc_setBlendMode('add')
+                gc_blurCircle(blur, -x, -y, cr)
+                gc_setBlendMode('alpha')
+            end
+            gc_setColor(1, 1, 1, t)
+            local star1 = TEXTURE[self.id == 'DP' and STAT.clicker and 'star2' or 'star1']
+            gc_mDraw(star1, x, y, ang, lerp(.16, .42, t))
+            if revMastery then gc_mDraw(star1, -x, -y, ang, lerp(.16, .42, t)) end
+        end
+    end
+
+    -- Icon cover
+    if faceUp then
+        gc_setColor((GAME.glassCard and ModData.color or ModData.textColor)[self.id])
+        local active = playing and self.inLastCommit or not playing and self.active
+        if M.EX == 0 then
+            if active then
+                gc_setLineWidth(6)
+                gc.polygon('line', iconFrame)
+                gc_setAlpha(.62)
+                gc.polygon('fill', iconFrame)
+            else
+                gc_setLineWidth(4)
+                gc.polygon('line', iconFrame)
+            end
+        elseif active then
+            gc_setAlpha(.62)
+            gc.polygon('fill', iconFrame)
+        end
+    end
+
+    gc_pop()
+    gc_draw(tempMesh, self.x1, self.y1, finalRot, finalSize)
 end
 
 return Card
