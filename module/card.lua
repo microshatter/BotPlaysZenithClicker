@@ -478,6 +478,35 @@ local glassCardText = setmetatable({}, {
         return t[k]
     end
 })
+-- 绕任意轴旋转点 (x,y,z)，轴 (ax,ay,az)，角度 theta（弧度）
+local function rotate_point_around_axis(x, y, z, ax, ay, az, theta)
+    -- 1. 归一化旋转轴
+    local len = math.sqrt(ax * ax + ay * ay + az * az)
+    if len < 0.0001 then return x, y, z end -- 零向量不旋转
+
+    local kx, ky, kz = ax / len, ay / len, az / len
+
+    -- 2. 预计算三角函数
+    local cos_t = math.cos(theta)
+    local sin_t = math.sin(theta)
+    local one_minus_cos = 1 - cos_t
+
+    -- 3. 计算点积 (k·v)
+    local dot = kx * x + ky * y + kz * z
+
+    -- 4. 计算叉乘 (k × v)
+    local cross_x = ky * z - kz * y
+    local cross_y = kz * x - kx * z
+    local cross_z = kx * y - ky * x
+
+    -- 5. 罗德里格公式：v_rot = v*cos + (k×v)*sin + k*(k·v)*(1-cos)
+    local rx = x * cos_t + cross_x * sin_t + kx * dot * one_minus_cos
+    local ry = y * cos_t + cross_y * sin_t + ky * dot * one_minus_cos
+    local rz = z * cos_t + cross_z * sin_t + kz * dot * one_minus_cos
+
+    return rx, ry, rz
+end
+
 function Card:draw()
     local texture = TEXTURE[self.id]
     local playing = GAME.playing
@@ -740,6 +769,8 @@ function Card:draw()
 
     local f = 2600 - 20 * CONF.rot3D_focal
     local t = CONF.rot3D_tilt * .0042
+    local t2 = CONF.rot3D_tilt * 20
+    local float = FloatOnCard == self.initOrder
     for i = 1, #meshVerticePosTemplate do
         local x, y, z = meshVerticePosTemplate[i][1], meshVerticePosTemplate[i][2], 0
 
@@ -752,6 +783,22 @@ function Card:draw()
         c, s = cos(rot3D), sin(rot3D)
         x, z = x * c - z * s, x * s + z * c
 
+        if float and t2 > 0 then
+            -- float tilting
+            local dx, dy, dz = MX - self.x, MY - self.y, 0 -- Cursor vector
+            local dist = (dx * dx + dy * dy) ^ .5
+            if dist > 1 then
+                local nx, ny, nz = 0, 0, 1 -- Normal vector
+                x, y, z = rotate_point_around_axis(
+                    x, y, z,
+                    ny * dz - nz * dy,
+                    nz * dx - nx * dz,
+                    nx * dy - ny * dx,
+                    -dist / t2
+                )
+            end
+        end
+
         meshVertices[i][1], meshVertices[i][2] = x / (z / f + 1), y / (z / f + 1)
     end
     tempMesh:setVertices(meshVertices)
@@ -759,5 +806,3 @@ function Card:draw()
 end
 
 return Card
-
--- TODO: local dx, dy = (MX - self.x1) / (240 * self.size), (MY - self.y1) / (330 * self.size)
