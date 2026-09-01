@@ -2,6 +2,7 @@ require 'module/bot'
 local playing = false
 
 local next = next
+local floor = math.floor
 local max, min = math.max, math.min
 local sin, cos = math.sin, math.cos
 local clamp, interpolate, clampInterpolate = MATH.clamp, MATH.interpolate, MATH.clampInterpolate
@@ -51,7 +52,7 @@ do
             local cid, dist = 0, 1e99
             for i = 1, #Cards do
                 if Cards[i]:mouseOn(x, y) then
-                    local dist2 = distance(x, y, Cards[i].x, Cards[i].y)
+                    local dist2 = distance(x, y, Cards[i].x1, Cards[i].y1)
                     if dist2 < dist then
                         dist = dist2
                         cid = i
@@ -106,7 +107,7 @@ local function keyTrigger(key)
                 GAME.nixPrompt('keep_no_keyboard')
                 FloatOnCard = bindID
                 SetMouseVisible(false)
-                MX, MY = C.x + math.random(-126, 126), C.y + math.random(-260, 260)
+                MX, MY = C.x1 + math.random(-126, 126), C.y1 + math.random(-260, 260)
                 C:setActive()
                 GAME.refreshLayout()
             else
@@ -303,7 +304,7 @@ function scene.mouseDown(x, y, k)
     HoldingButtons['mouse' .. k] = true
     GAME.nixPrompt('keep_no_mouse')
 
-    if getBtnPressed() > 1 + (URM and M.VL == 2 and 0 or math.floor(M.VL / 2)) then return true end
+    if getBtnPressed() > 1 + (URM and M.VL == 2 and 0 or floor(M.VL / 2)) then return true end
     if M.EX == 0 then
         SFX.play('move')
         mouseTrigger(x, y, k)
@@ -320,7 +321,7 @@ function scene.mouseUp(x, y, k)
     GAME.nixPrompt('keep_no_mouse')
     if k == 3 then return end
 
-    if getBtnPressed() > (URM and M.VL == 2 and 0 or math.floor(M.VL / 2)) then return end
+    if getBtnPressed() > (URM and M.VL == 2 and 0 or floor(M.VL / 2)) then return end
     if M.EX > 0 then
         mouseTrigger(x, y, k)
     end
@@ -696,7 +697,7 @@ function DrawBG(brightness, showRuler)
 
     -- Display altitude (Debug)
     -- gc_setColor(1, 1, 1)
-    -- gc.print(math.floor(GAME.bgH), 10, 10, 0, 2.6)
+    -- gc.print(floor(GAME.bgH), 10, 10, 0, 2.6)
 end
 
 function DrawPBline(h, pb, spd, textObj)
@@ -810,7 +811,7 @@ function scene.draw()
 
         -- Board
         if GAME.playing or GAME.boardAnim > 0 and not GAME.invisUI then
-            gc_push('transform')
+            gc_push()
             switchBoardCoord()
 
             local boxRX, boxRY = boardRX - 13, 110
@@ -1100,7 +1101,7 @@ function scene.overDraw()
 
         -- Spike counter
         if GAME.spikeCounter >= 8 and GAME.spikeTimer > 0 then
-            gc_push('transform')
+            gc_push()
             gc_translate(1226, 320)
             local _t = GAME.questTime
             local bk = _t < .12 and 1 + 62 * _t * (.12 - _t) or 1
@@ -1116,12 +1117,6 @@ function scene.overDraw()
             gc_pop()
         end
     end
-
-    -- Debug
-    -- setFont(30) gc_setColor(1, 1, 1)
-    -- for i = 1, #Cards do
-    --     gc.print(Cards[i].ty, Cards[i].x, Cards[i].y-260)
-    -- end
 
     -- bottom in-game UI
     if GAME.uiHide > 0 and not GAME.invisUI then
@@ -1222,12 +1217,28 @@ function scene.overDraw()
         for i = #Cards, 1, -1 do Cards[i]:draw() end
     end
 
+    -- Debug
+    if ZENITHA.getDebugMode() then
+        setFont(10); gc_setLineWidth(1); gc_setColor(1, 1, 1)
+        for i = 1, #Cards do
+            local c = Cards[i]
+            local x, y = c.x - 240 * c.size, c.y - 330 * c.size
+            gc_rectangle('line', x, y, 240 * 2 * c.size, 330 * 2 * c.size)
+            GC.print(c.id, x, y)
+            GC.print(floor(c.x) .. "," .. floor(c.y) .. "(" .. floor(c.x1) .. "," .. floor(c.y1) .. ")", x, y + 10)
+            GC.print('r_3d ' .. MATH.roundUnit(c.r_3d, .01), x, y + 20)
+            GC.print('r_3d_in ' .. MATH.roundUnit(c.r_3d_in, .01), x, y + 30)
+            GC.print('r_2d_rev ' .. MATH.roundUnit(c.r_2d_rev, .01), x, y + 40)
+            GC.print('r_2d_shake ' .. MATH.roundUnit(c.r_2d_shake, .01), x, y + 50)
+        end
+    end
+
     -- AS keyboard hint
     if M.AS > 0 and M.EX == 0 then
         local texts = CardHintText
         for i = 1, #Cards do
             local obj = texts[i]
-            local x, y = Cards[i].x + 90, Cards[i].y + 155
+            local x, y = Cards[i].x1 + 90, Cards[i].y1 + 155
             local k = min(60 / obj:getWidth(), 1)
             gc_setColor(ShadeColor)
             gc_strokeDraw(
@@ -1290,7 +1301,7 @@ function scene.overDraw()
 
                 -- Number
                 if GAME.fault then
-                    gc_push('transform')
+                    gc_push()
                     local strength = min(chain / 42, 1)
                     GC.rotate((math.random() - .5) * .4 * strength)
                     gc_translate(MATH.rand(-5, 5) * strength, MATH.rand(-5, 5) * strength)
@@ -1322,13 +1333,13 @@ function scene.overDraw()
                 gc_ucs_back()
             elseif GAME.comboStr == 'VLrGV' then
                 local x, y = -474, 52
-                gc_strokePrint('corner', 2, CLR.D, BoardColor, math.floor(GAME.achv_altFromSurge) .. "m", x, y - 20, 260, 'center')
+                gc_strokePrint('corner', 2, CLR.D, BoardColor, floor(GAME.achv_altFromSurge) .. "m", x, y - 20, 260, 'center')
             end
 
             -- Revive Task
             local task = GAME.currentTask
             if task then
-                gc_push('transform')
+                gc_push()
 
                 -- Lock
                 gc_translate(GAME.onAlly and -350 or 350, 212)
@@ -1470,7 +1481,7 @@ function scene.overDraw()
             if GAME.anyRev and M[infoID] == 2 then
                 local text = URM and MD.ultraName[infoID] or MD.revName[infoID]
                 setFont(70)
-                gc_push('transform')
+                gc_push()
                 gc_translate(0, -118)
                 GC.scale(1 + sin(t / 2.6) * .026)
                 GC.shear(sin(t) * .26, cos(t * 1.2) * .026)
