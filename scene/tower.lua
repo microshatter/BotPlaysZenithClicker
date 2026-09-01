@@ -1,6 +1,7 @@
 require 'module/bot'
 
 local next = next
+local floor = math.floor
 local max, min = math.max, math.min
 local sin, cos = math.sin, math.cos
 local clamp, interpolate, clampInterpolate = MATH.clamp, MATH.interpolate, MATH.clampInterpolate
@@ -50,7 +51,7 @@ do
             local cid, dist = 0, 1e99
             for i = 1, #Cards do
                 if Cards[i]:mouseOn(x, y) then
-                    local dist2 = distance(x, y, Cards[i].x, Cards[i].y)
+                    local dist2 = distance(x, y, Cards[i].x1, Cards[i].y1)
                     if dist2 < dist then
                         dist = dist2
                         cid = i
@@ -105,7 +106,7 @@ local function keyTrigger(key)
                 GAME.nixPrompt('keep_no_keyboard')
                 FloatOnCard = bindID
                 SetMouseVisible(false)
-                MX, MY = C.x + math.random(-126, 126), C.y + math.random(-260, 260)
+                MX, MY = C.x1 + math.random(-126, 126), C.y1 + math.random(-260, 260)
                 C:setActive()
                 GAME.refreshLayout()
             else
@@ -302,7 +303,7 @@ function scene.mouseDown(x, y, k)
     HoldingButtons['mouse' .. k] = true
     GAME.nixPrompt('keep_no_mouse')
 
-    if getBtnPressed() > 1 + (URM and M.VL == 2 and 0 or math.floor(M.VL / 2)) then return true end
+    if getBtnPressed() > 1 + (URM and M.VL == 2 and 0 or floor(M.VL / 2)) then return true end
     if M.EX == 0 then
         SFX.play('move')
         mouseTrigger(x, y, k)
@@ -319,7 +320,7 @@ function scene.mouseUp(x, y, k)
     GAME.nixPrompt('keep_no_mouse')
     if k == 3 then return end
 
-    if getBtnPressed() > (URM and M.VL == 2 and 0 or math.floor(M.VL / 2)) then return end
+    if getBtnPressed() > (URM and M.VL == 2 and 0 or floor(M.VL / 2)) then return end
     if M.EX > 0 then
         mouseTrigger(x, y, k)
     end
@@ -682,7 +683,7 @@ function DrawBG(brightness, showRuler)
 
     -- Display altitude (Debug)
     -- gc_setColor(1, 1, 1)
-    -- gc.print(math.floor(GAME.bgH), 10, 10, 0, 2.6)
+    -- gc.print(floor(GAME.bgH), 10, 10, 0, 2.6)
 end
 
 function DrawPBline(h, pb, spd, textObj)
@@ -1103,12 +1104,6 @@ function scene.overDraw()
         end
     end
 
-    -- Debug
-    -- setFont(30) gc_setColor(1, 1, 1)
-    -- for i = 1, #Cards do
-    --     gc.print(Cards[i].ty, Cards[i].x, Cards[i].y-260)
-    -- end
-
     -- bottom in-game UI
     if GAME.uiHide > 0 and not GAME.invisUI then
         local h = 100 - GAME.uiHide * 100
@@ -1208,12 +1203,28 @@ function scene.overDraw()
         for i = #Cards, 1, -1 do Cards[i]:draw() end
     end
 
+    -- Debug
+    if ZENITHA.getDebugMode() then
+        setFont(10); gc_setLineWidth(1); gc_setColor(1, 1, 1)
+        for i = 1, #Cards do
+            local c = Cards[i]
+            local x, y = c.x - 240 * c.size, c.y - 330 * c.size
+            gc_rectangle('line', x, y, 240 * 2 * c.size, 330 * 2 * c.size)
+            GC.print(c.id, x, y)
+            GC.print(floor(c.x) .. "," .. floor(c.y) .. "(" .. floor(c.x1) .. "," .. floor(c.y1) .. ")", x, y + 10)
+            GC.print('r_3d ' .. MATH.roundUnit(c.r_3d, .01), x, y + 20)
+            GC.print('r_3d_in ' .. MATH.roundUnit(c.r_3d_in, .01), x, y + 30)
+            GC.print('r_2d_rev ' .. MATH.roundUnit(c.r_2d_rev, .01), x, y + 40)
+            GC.print('r_2d_shake ' .. MATH.roundUnit(c.r_2d_shake, .01), x, y + 50)
+        end
+    end
+
     -- AS keyboard hint
     if M.AS > 0 and M.EX == 0 then
         local texts = CardHintText
         for i = 1, #Cards do
             local obj = texts[i]
-            local x, y = Cards[i].x + 90, Cards[i].y + 155
+            local x, y = Cards[i].x1 + 90, Cards[i].y1 + 155
             local k = min(60 / obj:getWidth(), 1)
             gc_setColor(ShadeColor)
             gc_strokeDraw(
@@ -1308,7 +1319,7 @@ function scene.overDraw()
                 gc_ucs_back()
             elseif GAME.comboStr == 'VLrGV' then
                 local x, y = -474, 52
-                gc_strokePrint('corner', 2, CLR.D, BoardColor, math.floor(GAME.achv_altFromSurge) .. "m", x, y - 20, 260, 'center')
+                gc_strokePrint('corner', 2, CLR.D, BoardColor, floor(GAME.achv_altFromSurge) .. "m", x, y - 20, 260, 'center')
             end
 
             -- Revive Task

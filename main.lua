@@ -96,16 +96,6 @@ function ZENITHA.globalEvent.keyDown(key, isRep)
         love.window.setFullscreen(CONF.fullscreen)
         confUpdate()
         MSG('dark', "Fullscreen: " .. (CONF.fullscreen and "ON" or "OFF"), 1)
-    elseif key == 'f10' then
-        CONF.syscursor = not CONF.syscursor
-        SetMouseVisible(true)
-        ApplySettings()
-        confUpdate()
-        MSG('dark', "Star Force: " .. (CONF.syscursor and "OFF" or "ON"), 1)
-    elseif key == 'f9' then
-        if not GAME.zenithTraveler then CONF.bg = not CONF.bg end
-        confUpdate()
-        MSG('dark', "BG: " .. (CONF.bg and "ON" or "OFF"), 1)
     elseif key == 'f8' then
         if CONF.bgBrightness < 80 then
             CONF.bgBrightness = MATH.clamp(CONF.bgBrightness + 10, 30, 80)
@@ -338,6 +328,8 @@ CONF = {
     bgBrightness = 40,
     boardOpacity = 50,
     damageShakiness = 50,
+    rot3D_focal = 50,
+    rot3D_tilt = 50,
     bg = true,
     sfx = 60,
     bgm = 100,
@@ -1437,15 +1429,15 @@ function Daemon_Fast()
                 if skipNextShuffle then
                     if M.MS == 0 then
                         if MSactive then
-                            for i = 1, deckSize do Cards[i].visY = 0 end
+                            for i = 1, deckSize do Cards[i].dy_ms = 0 end
                             GAME.refreshLayout()
                         end
                         MSactive = false
                     else
                         if URM and M.MS == 2 then
-                            for i = 1, deckSize do Cards[i].visY = math.random(-42, 42) end
+                            for i = 1, deckSize do Cards[i].dy_ms = math.random(-42, 42) end
                         else
-                            for i = 1, deckSize do Cards[i].visY = M.MS * math.random(-4, 4) end
+                            for i = 1, deckSize do Cards[i].dy_ms = M.MS * math.random(-4, 4) end
                         end
                         MSactive = true
                         GAME.refreshLayout()
@@ -1631,7 +1623,7 @@ TEXTS.version:set(SYSTEM .. (CONF.oldHitbox and " T" or " V") .. (require 'versi
 GAME.refreshCurrentCombo()
 
 GAME.refreshLayout()
-for i, C in ipairs(Cards) do C.x, C.y = C.tx, C.ty + 260 + 26 * 1.6 ^ i end
+for i, C in ipairs(Cards) do C.x1, C.y1 = C.x, C.y + 260 + 26 * 1.6 ^ i end
 
 if SYSTEM == 'Web' then
     _G[('DiscordRPC')] = { update = NULL, setEnable = NULL }
