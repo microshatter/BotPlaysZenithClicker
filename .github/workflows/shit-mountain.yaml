@@ -42,7 +42,8 @@ jobs:
           # Prefer the structured JSON field to avoid terminal text format changes breaking parsing
           SCORE=""
           if [ -f analysis.json ]; then
-            SCORE=$((100 - $(grep -oP '"overallScore"\s*:\s*\K[0-9.]+' analysis.json | head -1)))
+            OVERALL_SCORE=$(grep -oP '"overallScore"\s*:\s*\K[0-9.]+' analysis.json | head -1)
+            SCORE=$(echo "100 - $RAW_VAL" | bc -l)
           fi
 
           if [ -z "$SCORE" ]; then
