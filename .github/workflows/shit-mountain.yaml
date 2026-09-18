@@ -205,7 +205,7 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const score = parseFloat('${{ steps.analyze.outputs.score }}');
+            const score = 100 - parseFloat('${{ steps.analyze.outputs.score }}');
             const status = '${{ steps.analyze.outputs.status }}';
             const emoji = '${{ steps.analyze.outputs.emoji }}';
             const desc = '${{ steps.analyze.outputs.desc }}';
