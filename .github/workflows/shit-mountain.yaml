@@ -42,7 +42,7 @@ jobs:
           # Prefer the structured JSON field to avoid terminal text format changes breaking parsing
           SCORE=""
           if [ -f analysis.json ]; then
-            SCORE=$(grep -oP '"overallScore"\s*:\s*\K[0-9.]+' analysis.json | head -1)
+            SCORE=$((100 - $(grep -oP '"overallScore"\s*:\s*\K[0-9.]+' analysis.json | head -1)))
           fi
 
           if [ -z "$SCORE" ]; then
@@ -205,7 +205,7 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const score = 100 - parseFloat('${{ steps.analyze.outputs.score }}');
+            const score = parseFloat('${{ steps.analyze.outputs.score }}');
             const status = '${{ steps.analyze.outputs.status }}';
             const emoji = '${{ steps.analyze.outputs.emoji }}';
             const desc = '${{ steps.analyze.outputs.desc }}';
