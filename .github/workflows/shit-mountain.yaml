@@ -57,8 +57,9 @@ jobs:
             exit 1
           fi
 
-          echo "Raw score: $SCORE"
+          echo "Cleaness raw score: $SCORE"
           SCORE=$(echo "100 - $SCORE" | bc -l)
+          echo "After calculation: $SCORE"
 
           # 11-tier fine-grained levels (matching the source QualityLevels)
           EMOJI=""
