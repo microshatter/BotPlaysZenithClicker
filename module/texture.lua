@@ -1,18 +1,5 @@
-FILE.createDirectory({
-    'customAssets/achievements',
-    'customAssets/badges',
-    'customAssets/card',
-    'customAssets/music',
-    'customAssets/panel',
-    'customAssets/particle',
-    'customAssets/rank',
-    'customAssets/revive',
-    'customAssets/stat',
-    'customAssets/tower',
-})
-
 ---@return love.Texture
-local function assets(path) return FILE.exist('customAssets/' .. path) and 'customAssets/' .. path or 'assets/' .. path end
+local function assets(path) return 'assets/' .. path end
 local function q(oy, n, size)
     return GC.newQuad(
         n * size, oy,
@@ -101,17 +88,95 @@ TEXTURE = {
         rEX = q2(0945, 1331, 315, 332),
         rDP = q2(1260, 1016, 419, 378),
     },
-    EX = { lock = '_lockover_9', front = assets 'card/expert.png', back = assets 'card/expert-back.png' },
-    NH = { lock = '_lockfull_2', front = assets 'card/nohold.png', back = assets 'card/nohold-back.png' },
-    MS = { lock = '_lockfull_3', front = assets 'card/messy.png', back = assets 'card/messy-back.png' },
-    GV = { lock = '_lockfull_4', front = assets 'card/gravity.png', back = assets 'card/gravity-back.png' },
-    VL = { lock = '_lockfull_5', front = assets 'card/volatile.png', back = assets 'card/volatile-back.png' },
-    DH = { lock = '_lockfull_6', front = assets 'card/doublehole.png', back = assets 'card/doublehole-back.png' },
-    IN = { lock = '_lockfull_7', front = assets 'card/invisible.png', back = assets 'card/invisible-back.png' },
-    AS = { lock = '_lockfull_8', front = assets 'card/allspin.png', back = assets 'card/allspin-back.png' },
-    DP = { lock = '_lockover_?', front = assets 'card/duo.png', back = assets 'card/duo-back.png' },
-    lockfull = assets 'card/lockfull.png',
-    lockover = assets 'card/lockover.png',
+    card = (function()
+        local fileName = {
+            EX = 'expert',
+            NH = 'nohold',
+            MS = 'messy',
+            GV = 'gravity',
+            VL = 'volatile',
+            DH = 'doublehole',
+            IN = 'invisible',
+            AS = 'allspin',
+            DP = 'duo',
+        }
+        local zc = { front = {}, back = {} }
+        local mini = TABLE.copyAll(zc)
+        local star = TABLE.copyAll(zc)
+        local draft = TABLE.copyAll(zc)
+
+        -- Front
+        for k, v in next, fileName do
+            zc.front[k] = assets('card/front_zc/' .. v .. '.png')
+            mini.front[k] = assets('card/front_mini/' .. v .. '.png')
+            star.front[k] = assets('card/front_star/' .. v .. '.png')
+            draft.front[k] = assets('card/front_draft/' .. v .. '.png')
+        end
+
+        -- Back
+        for k, v in next, fileName do
+            zc.back[k] = assets('card/back_zc/' .. v .. '-back.png')
+            mini.back[k] = assets('card/back_mini/' .. v .. '-back.png')
+            star.back[k] = assets('card/back_star/' .. v .. '-back.png')
+        end
+        draft.back = zc.back
+
+        -- Lock
+        zc.lock = {
+            EX = '_lockover_9',
+            NH = '_lockfull_2',
+            MS = '_lockfull_3',
+            GV = '_lockfull_4',
+            VL = '_lockfull_5',
+            DH = '_lockfull_6',
+            IN = '_lockfull_7',
+            AS = '_lockfull_8',
+            DP = '_lockover_?',
+            lockfull = assets 'card/lock_zc/lockfull.png',
+            lockover = assets 'card/lock_zc/lockover.png',
+        }
+        mini.lock = setmetatable({
+            lockfull = assets 'card/lock_mini/lockfull.png',
+            lockover = assets 'card/lock_mini/lockover.png',
+        }, { __index = zc.lock })
+        star.lock = zc.lock
+        draft.lock = zc.lock
+
+        -- Icon Frame
+        do
+            local x, y = 156.5, -245.5
+            local r = 65
+            zc.iconFrame = {
+                x - r, y - r,
+                x + 7, y - r,
+                x + r, y - 7,
+                x + r, y + r,
+                x - 12, y + r,
+                x - r, y + 12,
+            }
+        end
+        mini.iconFrame = zc.iconFrame
+        star.iconFrame = zc.iconFrame
+        draft.iconFrame = zc.iconFrame
+
+        -- do
+        --     local x, y = 157, -246
+        --     local r = 72
+        --     local _ = {
+        --         x, y - r,
+        --         x + r, y,
+        --         x, y + r,
+        --         x - r, y,
+        --     }
+        -- end
+
+        return {
+            zc = zc,
+            mini = mini,
+            star = star,
+            draft = draft,
+        }
+    end)(),
     towerBG = { assets 'tower/f1.jpg', assets 'tower/f2.jpg', assets 'tower/f3.jpg', assets 'tower/f4.jpg', assets 'tower/f5.jpg', assets 'tower/f6.jpg', assets 'tower/f7.jpg', assets 'tower/f8.jpg', assets 'tower/f9.jpg', assets 'tower/f10.png' },
     moon = assets 'tower/moon.png',
     stars = assets 'tower/stars.png',
@@ -374,9 +439,9 @@ TEXTURE = TABLE.linkSource({}, TEXTURE, function(path)
     if path:match('^_lock') then
         local lockType = path:match('_(lock....)')
         local char = path:sub(-1)
-        local w, h = TEXTURE[lockType]:getDimensions()
+        local w, h = TEXTURE.card[CONF.skin_front].lock[lockType]:getDimensions()
         return GC.initCanvas(w, h, function()
-            GC.draw(TEXTURE[lockType], 0, 0)
+            GC.draw(TEXTURE.card[CONF.skin_front].lock[lockType], 0, 0)
             local t = GC.newText(FONT.get(70, 'sans'), char)
             if lockType == 'lockfull' then
                 GC.setColor(CLR.HEX "646483FF")
@@ -404,6 +469,13 @@ TEXTURE = TABLE.linkSource({}, TEXTURE, function(path)
         return res
     end
 end)
+
+-- Manually trigger lazyload for iconFrame data
+for _, skin in next, TEXTURE.card do
+    for i = 1, #getmetatable(skin.iconFrame).__source do
+        local _ = skin.iconFrame[i]
+    end
+end
 
 TEXTURE.pixel = GC.load { w = 1, h = 1, { 'clear', 1, 1, 1 } }
 
@@ -545,6 +617,8 @@ BG.set('black')
 MSG.setSafeY(75)
 MSG.addCategory('dark', CLR.D, CLR.L)
 MSG.addCategory('bright', CLR.L, CLR.D)
+MSG.addCategory('ultra', CLR.l2R, CLR.D)
+MSG.addCategory('ultra2', CLR.d3R, CLR.L)
 MSG.addCategory('speedrun', COLOR.lG, CLR.D)
 for i = 0, 6 do MSG.addCategory(AchvMsgStyle[i].id, AchvMsgStyle[i].bg, CLR.L, TEXTURE.achievement.frame[i]) end
 for i = 1, 6 do MSG.addCategory("wreath_" .. i, AchvMsgStyle[5].bg, CLR.L, GC.load { w = 256, { 'draw', TEXTURE.achievement.frame[5] }, { 'draw', TEXTURE.achievement.wreath[i] } }) end

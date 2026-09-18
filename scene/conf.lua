@@ -2,14 +2,18 @@
 local scene = {}
 
 
+-- widget lists of each page, will be registered to scene.widgetList at the end
+local pages = {}
+
 -- 1. General
 -- 2. Video
 -- 3. User
 -- 4. Album
+-- 5. Deck
 local page = 1
-local maxPage = 4
-local uidList = {} ---@type ({uid: string, modTime?: string} | false)[]
+local maxPage = 5
 
+local uidList = {} ---@type ({uid: string, modTime?: string} | false)[]
 local anonUser
 local resetall_cnt, resetall_anim, lastClear
 
@@ -107,6 +111,54 @@ local bgmHeight = {
     Floors[9].top + 26, -- special
 }
 
+local skinCtrl
+local skinList = {
+    skin_front = { 'zc', 'mini', 'star', 'draft' },
+    skin_back = { 'zc', 'mini', 'star' },
+}
+local skinUnlocked = {}
+local skinPage = { skin_front = '', skin_back = '' }
+local skinDesc = {
+    zc = "Zenith Clicker - MrZ",
+    mini = "Minimalism - MrZ",
+    star = "Planets - Rodinia",
+    draft = "Zenith Clicker (Draft) - MrZ",
+}
+local skinAnimInt1, skinAnim1
+local function tween_cardFan1(t)
+    skinAnim1 = 9 * t
+    if t == 0 then skinAnimInt1 = 0 end
+    if math.ceil(skinAnim1) > skinAnimInt1 then
+        skinAnimInt1 = math.ceil(skinAnim1)
+        SFX.play('card_slide_' .. math.random(4), .42)
+    end
+end
+local skinAnimInt2, skinAnim2
+local function tween_cardFan2(t)
+    skinAnim2 = 9 * t
+    if t == 0 then skinAnimInt2 = 0 end
+    if math.ceil(skinAnim2) > skinAnimInt2 then
+        skinAnimInt2 = math.ceil(skinAnim2)
+        SFX.play('card_slide_' .. math.random(4), .42)
+    end
+end
+local function startCardFanAnim(which)
+    if which ~= 2 then
+        TWEEN.new(tween_cardFan1)
+            :setUnique('cardfan1')
+            :setEase('OutQuad')
+            :setDuration(.62)
+            :run()
+    end
+    if which ~= 1 then
+        TWEEN.new(tween_cardFan2)
+            :setUnique('cardfan2')
+            :setEase('OutQuad')
+            :setDuration(.62)
+            :run()
+    end
+end
+
 local function refreshWidgets()
     for _, W in next, scene.widgetList do W:setVisible() end
 end
@@ -144,13 +196,21 @@ local function refreshUID()
         uidList[i] = dat and { uid = dat.uid, modTime = timePast(dat.modTime, os.time()) } or false
     end
 end
+local function refreshSkin()
+    skinUnlocked.zc = true
+    skinUnlocked.mini = TABLE.countAll(GAME.completion, 0) == 0
+    skinUnlocked.star = CalculateCR() >= 20000
+    skinUnlocked.draft = STAT.clicker
+    skinPage.skin_front = CONF.skin_front
+    skinPage.skin_back = CONF.skin_back
+end
 
 local sp = { f0 = 1, f1 = 1, f0r = 1, f1r = 1 }
 local function refreshSongInfo()
-    if sp[SongNamePlaying] then
-        playingBgmTitle = songList[SongNamePlaying .. (GAME.mod.EX > 0 and '_EX' or '')]
+    if sp[GAME.bgm_playingName] then
+        playingBgmTitle = songList[GAME.bgm_playingName .. (GAME.mod.EX > 0 and '_EX' or '')]
     else
-        playingBgmTitle = songList[SongNamePlaying] or "Rewrite"
+        playingBgmTitle = songList[GAME.bgm_playingName] or "Rewrite"
     end
     playingBgmLength = BGM.getDuration()
     playingBgmLengthStr = STRING.time_simp(playingBgmLength)
@@ -175,9 +235,10 @@ function scene.load()
     TASK.unlock('import')
     TASK.unlock('rebind_control')
     TASK.unlock('just_saved')
-    refreshWidgets()
     refreshSongInfo()
     refreshUID()
+    refreshSkin()
+    refreshWidgets()
 end
 
 -- function scene.unload()
@@ -255,6 +316,7 @@ function scene.keyDown(key, isRep)
                 page = p
                 SFX.play('menuclick')
                 refreshWidgets()
+                if p == 5 then startCardFanAnim() end
             end
         elseif page == 4 then
             if key == 'left' then
@@ -269,9 +331,47 @@ function scene.keyDown(key, isRep)
             elseif key == 'end' then
                 TASK.new(Task_MusicEnd, true)
             elseif key == 'space' then
-                BgmLooping, BgmNeedSkip = false, false
+                GAME.bgm_looping, GAME.bgm_needSkip = false, false
             end
             return true
+        elseif page == 5 then
+            local holdCtrl
+            if skinCtrl ~= nil then holdCtrl = skinCtrl else holdCtrl = KBisDown('lctrl', 'rctrl') end
+            local skinKey = holdCtrl and 'skin_back' or 'skin_front'
+            if key == CONF.keybind[19] then
+                if not skinUnlocked[skinPage[skinKey]] then
+                    SFX.play('no')
+                elseif CONF[skinKey] ~= skinPage[skinKey] then
+                    CONF[skinKey] = skinPage[skinKey]
+                    refreshWidgets()
+                    SFX.play('garbagesmash', 1, 0, 1.26)
+                end
+            elseif key == 'left' then
+                if TABLE.find(skinList[skinKey], skinPage[skinKey]) then
+                    if skinPage[skinKey] ~= skinList[skinKey][1] then
+                        skinPage[skinKey] = TABLE.prev(skinList[skinKey], skinPage[skinKey]) or skinPage[skinKey]
+                        startCardFanAnim(holdCtrl and 2 or 1)
+                        refreshWidgets()
+                    end
+                else
+                    skinPage[skinKey] = skinList[skinKey][1]
+                    startCardFanAnim(holdCtrl and 2 or 1)
+                    refreshWidgets()
+                end
+            elseif key == 'right' then
+                if TABLE.find(skinList[skinKey], skinPage[skinKey]) then
+                    if skinPage[skinKey] ~= skinList[skinKey][#skinList[skinKey]] then
+                        skinPage[skinKey] = TABLE.next(skinList[skinKey], skinPage[skinKey]) or skinPage[skinKey]
+                        startCardFanAnim(holdCtrl and 2 or 1)
+                        refreshWidgets()
+                    end
+                else
+                    skinPage[skinKey] = skinList[skinKey][#skinList[skinKey]]
+                    startCardFanAnim(holdCtrl and 2 or 1)
+                    refreshWidgets()
+                end
+            end
+            if holdCtrl then skinPage.skin_back = skinPage[skinKey] else skinPage.skin_front = skinPage[skinKey] end
         end
     end
     ZENITHA._cursor.active = true
@@ -283,13 +383,31 @@ scene.resize = refreshWidgets
 -- Panel size
 local w, h = 900, 830
 local baseX, baseY = 800 - w / 2, 500 - h / 2 + 10
+local cardFanData1, cardFanData2 = {}, {}
+for i = 1, 9 do
+    local dist = 80
+    table.insert(cardFanData1, {
+        x = w * .5 + dist * (i - 5),
+        y = h * .17,
+        k = .35,
+        id = Cards[i].id,
+        face = 'front',
+    })
+    table.insert(cardFanData2, {
+        x = w * .5 + dist * (i - 5),
+        y = h * .65,
+        k = .35,
+        id = Cards[i].id,
+        face = 'back',
+    })
+end
 
 local gc = love.graphics
 local gc_replaceTransform = gc.replaceTransform
 local gc_draw, gc_setColor, gc_rectangle = gc.draw, gc.setColor, gc.rectangle
 local gc_print, gc_printf = gc.print, gc.printf
 local gc_ucs_move, gc_ucs_back = GC.ucs_move, GC.ucs_back
-local gc_setAlpha, gc_mRect, gc_mStr = GC.setAlpha, GC.mRect, GC.mStr
+local gc_setAlpha, gc_mDraw, gc_mRect, gc_mStr = GC.setAlpha, GC.mDraw, GC.mRect, GC.mStr
 local setFont = FONT.set
 local function drawSliderComponents(y, title, t1, t2, value)
     gc_ucs_move(0, y)
@@ -311,17 +429,17 @@ end
 
 local playing
 function scene.update(dt)
-    if SongNamePlaying ~= playing then
+    if GAME.bgm_playingName ~= playing then
         refreshSongInfo()
-        playing = SongNamePlaying
+        playing = GAME.bgm_playingName
     end
-    if page == 4 and (BgmPlaying == 'tera' or BgmPlaying == 'terar') then
-        GAME.height = math.max(-62, GAME.height + dt * (BgmPlaying == 'tera' and 20 or 42) * (GAME.height >= 1650 and .2 or 1))
+    if page == 4 and (GAME.bgm_playing == 'tera' or GAME.bgm_playing == 'terar') then
+        GAME.height = math.max(-62, GAME.height + dt * (GAME.bgm_playing == 'tera' and 20 or 42) * (GAME.height >= 1650 and .2 or 1))
         if GAME.height >= 1726 then GAME.bgH, GAME.height = -30, -30 end
         dt = dt * 2.6
     end
     GAME.bgH = MATH.expApproach(GAME.bgH, GAME.height, dt * 1.6)
-    StarPS:moveTo(0, -GAME.bgH * 2 * BgScale)
+    StarPS:moveTo(0, -GAME.bgH * 2 * GAME.bgK)
     StarPS:update(dt)
     if not TASK.getLock('reset_all') then
         if resetall_cnt == 16 then IssueAchv('knifes_edge') end
@@ -362,14 +480,18 @@ function scene.draw()
         drawSliderComponents(220, "BG  BRIGHTNESS", "DARK (F7)", "BRIGHT (F8)", CONF.bgBrightness)
         drawSliderComponents(300, "BOARD  OPACITY", "TRANSPARENT", "OPAQUE", CONF.boardOpacity)
         drawSliderComponents(380, "DAMAGE  SHAKINESS", "STIFF", "SHAKY", CONF.damageShakiness)
-        drawSliderComponents(460, "CARD  3D  ROT.  FOCAL", "FAR", "CLOSE", CONF.rot3D_focal)
-        drawSliderComponents(540, "CARD  3D  ROT.  TILT", "PLAIN", "TILT", CONF.rot3D_tilt)
+        if CONF.rot3D then
+            drawSliderComponents(540, "3D  ROTATION  TILT", "PLAIN", "TILT", CONF.rot3D_tilt)
+            drawSliderComponents(620, "3D  ROTATION  FOCAL", "FAR", "CLOSE", CONF.rot3D_focal)
+        else
+            drawSliderComponents(540, "2D  ROTATION  TILT", "PLAIN", "TILT", CONF.rot3D_tilt)
+        end
     elseif page == 3 then
         if resetall_anim > .1 then
             local t2 = MATH.iLerp(.1, 1, resetall_anim)
             gc_setColor(1, 1, 1, t2 * .42)
-            GC.mDraw(TEXTURE.warning, w / 2, h / 2, 0, MATH.lerp(1, 2.6, t2) ^ 2.6)
-            GC.setLineWidth(2)
+            gc_mDraw(TEXTURE.warning, w / 2, h / 2, 0, MATH.lerp(1, 2.6, t2) ^ 2.6)
+            gc.setLineWidth(2)
             gc_setColor(1, t % .16 < .08 and 0 or 1, 0, resetall_anim * 2)
             gc_mRect('line', 450, 420, 520, 140, 20)
         end
@@ -415,8 +537,8 @@ function scene.draw()
         gc_print(playingBgmLengthStr, len - 45, 49, 0, .626)
 
         -- Repeat marks
-        local data = BgmData[BgmPlaying]
-        if BgmLooping then
+        local data = BgmMeta[GAME.bgm_playing]
+        if GAME.bgm_looping then
             if data.loop[1] == 0 then
                 gc_print('D.C.', len * data.loop[2] / playingBgmLength, 35, 0, .3)
             else
@@ -428,22 +550,22 @@ function scene.draw()
         -- Progress bar
         gc_setColor(clr.L)
         gc_rectangle('fill', 0, 46, len, 4)
-        if BgmPlaying == 'tera' then
+        if GAME.bgm_playing == 'tera' then
             gc_setColor(COLOR.rainbow_light(2.6 * t))
-        elseif BgmPlaying == 'terar' then
+        elseif GAME.bgm_playing == 'terar' then
             gc_setColor(COLOR.rainbow_light(20 * t))
         else
-            gc_setColor(bgmColors[SongNamePlaying])
+            gc_setColor(bgmColors[GAME.bgm_playingName])
         end
         gc_rectangle('fill', 0, 46, len * playTime / playingBgmLength, 4)
 
         -- Ambient Glow
         gc.push('transform')
         gc_replaceTransform(SCR.origin)
-        if BgmPlaying == 'tera' or BgmPlaying == 'terar' then
+        if GAME.bgm_playing == 'tera' or GAME.bgm_playing == 'terar' then
             gc_setAlpha(.42)
         else
-            gc_setAlpha(.26 - .12 * MusicBeat)
+            gc_setAlpha(.26 - .12 * GAME.bgm_beat)
         end
         gc_draw(TEXTURE.transition, 0, 0, 0, .42 / 128 * SCR.w, SCR.h)
         gc_draw(TEXTURE.transition, SCR.w, 0, 0, -.42 / 128 * SCR.w, SCR.h)
@@ -452,8 +574,8 @@ function scene.draw()
         -- Title
         gc_setAlpha(1)
         gc_mStr(playingBgmTitle, len / 2, 0)
-        if not (BgmPlaying == 'tera' or BgmPlaying == 'terar') then
-            gc_setColor(1, 1, 1, MATH.lerp(.62, .26, MusicBeat))
+        if not (GAME.bgm_playing == 'tera' or GAME.bgm_playing == 'terar') then
+            gc_setColor(1, 1, 1, MATH.lerp(.62, .26, GAME.bgm_beat))
             gc_mStr(playingBgmTitle, len / 2, -1.26)
         end
         gc_setColor(clr.LT)
@@ -461,16 +583,37 @@ function scene.draw()
         gc_printf(data.meta, len / 2, 56, 2 * len, 'center', 0, .42, .42, len)
 
         -- Skip marks
-        if BgmNeedSkip then
+        if GAME.bgm_needSkip then
             local alpha = .26 + .62 * (-2.6 * t % 1)
             gc_setColor(COLOR.C)
             gc_setAlpha(alpha)
-            gc_mRect('fill', len * BgmNeedSkip[1] / playingBgmLength, 48, 2, 9)
+            gc_mRect('fill', len * GAME.bgm_needSkip[1] / playingBgmLength, 48, 2, 9)
             gc_setColor(COLOR.O)
             gc_setAlpha(alpha)
-            gc_mRect('fill', len * BgmNeedSkip[2] / playingBgmLength, 48, 2, 9)
+            gc_mRect('fill', len * GAME.bgm_needSkip[2] / playingBgmLength, 48, 2, 9)
         end
         gc_ucs_back()
+    elseif page == 5 then
+        -- Card fan
+        gc_setColor(1, 1, 1, skinAnim1 + 1 - skinAnimInt1)
+        for i = skinAnimInt1, 1, -1 do
+            local d = cardFanData1[i]
+            gc_mDraw(TEXTURE.card[skinPage.skin_front][d.face][d.id], d.x, d.y, d.r, d.k)
+            gc_setColor(1, 1, 1)
+        end
+        gc_setColor(1, 1, 1, skinAnim2 + 1 - skinAnimInt2)
+        for i = skinAnimInt2, 1, -1 do
+            local d = cardFanData2[i]
+            gc_mDraw(TEXTURE.card[skinPage.skin_back][d.face][d.id], d.x, d.y, d.r, d.k)
+            gc_setColor(1, 1, 1)
+        end
+        setFont(50)
+        gc_setColor(clr.LT)
+        gc_mStr(skinDesc[skinPage.skin_front], w / 2, 270)
+        gc_mStr(skinDesc[skinPage.skin_back], w / 2, h - 160)
+        gc_setColor(clr.L)
+        if not skinUnlocked[skinPage.skin_front] or skinPage.skin_front == CONF.skin_front then gc_mStr(skinUnlocked[skinPage.skin_front] and "EQUIPPED" or "LOCKED", w / 2, 340) end
+        if not skinUnlocked[skinPage.skin_back] or skinPage.skin_back == CONF.skin_back then gc_mStr(skinUnlocked[skinPage.skin_back] and "EQUIPPED" or "LOCKED", w / 2, h - 90) end
     end
 
     -- Top bar & title
@@ -501,9 +644,6 @@ function scene.draw()
     setFont(30)
     gc_print("TWEAK YOUR SETTINGS FOR A BETTER CLICKING EXPERIENCE", 15, -45, 0, .85, 1)
 end
-
--- widget lists of each page, will be registered to scene.widgetList at the end
-local pages = {}
 
 pages[1] = {
     -- General
@@ -657,23 +797,36 @@ pages[2] = {
         code = function(value) CONF.damageShakiness = value end,
         sound_drag = 'rotate',
     },
-    WIDGET.new { -- 3D rotation focal
-        type = 'slider',
-        x = baseX + 240 + 85, y = baseY + 460, w = 400,
-        axis = { 0, 100, 10 },
-        frameColor = 'dD', fillColor = clr.D,
-        disp = function() return CONF.rot3D_focal end,
-        code = function(value) CONF.rot3D_focal = value end,
-        sound_drag = 'rotate',
+    WIDGET.new { -- 3D rotation
+        type = 'checkBox',
+        fillColor = clr.cbFill,
+        frameColor = clr.cbFrame,
+        textColor = clr.T, text = "3D CARD ROTATION",
+        x = baseX + 55, y = baseY + 460,
+        disp = function() return CONF.rot3D end,
+        code = function()
+            CONF.rot3D = not CONF.rot3D
+            scene.widgetList.rot3D_focal:setVisible()
+        end,
     },
     WIDGET.new { -- 3D rotation tilt
-        type = 'slider',
+        name = 'rot3D_tilt', type = 'slider',
         x = baseX + 240 + 85, y = baseY + 540, w = 400,
         axis = { 0, 100, 10 },
         frameColor = 'dD', fillColor = clr.D,
         disp = function() return CONF.rot3D_tilt end,
         code = function(value) CONF.rot3D_tilt = value end,
         sound_drag = 'rotate',
+    },
+    WIDGET.new { -- 3D rotation focal
+        name = 'rot3D_focal', type = 'slider',
+        x = baseX + 240 + 85, y = baseY + 620, w = 400,
+        axis = { 0, 100, 10 },
+        frameColor = 'dD', fillColor = clr.D,
+        disp = function() return CONF.rot3D_focal end,
+        code = function(value) CONF.rot3D_focal = value end,
+        sound_drag = 'rotate',
+        visibleFunc = function() return page == 2 and CONF.rot3D end,
     },
 }
 
@@ -859,6 +1012,7 @@ pages[3] = {
                 STAT.system = SYSTEM
                 IssueAchv('zenith_relocation')
             end
+            GAME.speedrunning = false
             Initialize(true)
             if TestMode then
                 MSG('dark', "Progress imported, but won't be saved")
@@ -1084,7 +1238,7 @@ pages[4] = {
         color = clr.L,
         fontSize = 30, textColor = clr.LT, text = "NO LOOPS",
         onClick = function()
-            BgmLooping, BgmNeedSkip = false, false
+            GAME.bgm_looping, GAME.bgm_needSkip = false, false
         end,
     },
 }
@@ -1159,22 +1313,100 @@ albumBtn {
     visibleFunc = function() return page == 4 and STAT.clicker end,
 }
 
-local function newTabBtn(text, y, key)
+pages[5] = {
+    WIDGET.new { -- PREV
+        type = 'button',
+        x = baseX + 110, y = baseY + 375, w = 160, h = 60,
+        color = clr.L,
+        fontSize = 30, textColor = clr.LT, text = "< PREV",
+        onClick = function()
+            skinCtrl = false
+            love.keypressed('left')
+            skinCtrl = nil
+        end,
+        visibleFunc = function() return page == 5 and TABLE.find(skinList.skin_front, skinPage.skin_front) > 1 end
+    },
+    WIDGET.new { -- SELECT
+        type = 'button',
+        x = baseX + w / 2, y = baseY + 375, w = 160, h = 60,
+        color = clr.L,
+        fontSize = 30, textColor = clr.LT, text = "SELECT",
+        onClick = function()
+            skinCtrl = false
+            love.keypressed(CONF.keybind[19])
+            skinCtrl = nil
+        end,
+        visibleFunc = function() return page == 5 and skinPage.skin_front ~= CONF.skin_front and skinUnlocked[skinPage.skin_front] end
+    },
+    WIDGET.new { -- NEXT
+        type = 'button',
+        x = baseX + w - 110, y = baseY + 375, w = 160, h = 60,
+        color = clr.L,
+        fontSize = 30, textColor = clr.LT, text = "NEXT >",
+        onClick = function()
+            skinCtrl = false
+            love.keypressed('right')
+            skinCtrl = nil
+        end,
+        visibleFunc = function() return page == 5 and TABLE.find(skinList.skin_front, skinPage.skin_front) < #skinList.skin_front end
+    },
+
+    WIDGET.new { -- PREV
+        type = 'button',
+        x = baseX + 110, y = baseY + h - 60, w = 160, h = 60,
+        color = clr.L,
+        fontSize = 30, textColor = clr.LT, text = "< PREV",
+        onClick = function()
+            skinCtrl = true
+            love.keypressed('left')
+            skinCtrl = nil
+        end,
+        visibleFunc = function() return page == 5 and TABLE.find(skinList.skin_back, skinPage.skin_back) > 1 end
+    },
+    WIDGET.new { -- SELECT
+        type = 'button',
+        x = baseX + w / 2, y = baseY + h - 60, w = 160, h = 60,
+        color = clr.L,
+        fontSize = 30, textColor = clr.LT, text = "SELECT",
+        onClick = function()
+            skinCtrl = true
+            love.keypressed(CONF.keybind[19])
+            skinCtrl = nil
+        end,
+        visibleFunc = function() return page == 5 and skinPage.skin_back ~= CONF.skin_back and skinUnlocked[skinPage.skin_back] end
+    },
+    WIDGET.new { -- NEXT
+        type = 'button',
+        x = baseX + w - 110, y = baseY + h - 60, w = 160, h = 60,
+        color = clr.L,
+        fontSize = 30, textColor = clr.LT, text = "NEXT >",
+        onClick = function()
+            skinCtrl = true
+            love.keypressed('right')
+            skinCtrl = nil
+        end,
+        visibleFunc = function() return page == 5 and TABLE.find(skinList.skin_back, skinPage.skin_back) < #skinList.skin_back end
+    },
+}
+
+local function newTabBtn(text, y, key, visFunc)
     return WIDGET.new {
         type = 'button',
         pos = { 1, 0 }, x = -60, y = y, w = 160, h = 60,
         color = { CLR.HEX '383838' },
         fontSize = 30, text = text, textColor = 'DL',
         onClick = function() love.keypressed(key) end,
+        visibleFunc = visFunc,
     }
 end
 
 -- Tabs
 local tab = {
-    newTabBtn("GENRL  ", 140 + 90 * 0, '1'),
-    newTabBtn("VIDEO  ", 140 + 90 * 1, '2'),
-    newTabBtn("USER   ", 140 + 90 * 2, '3'),
-    newTabBtn("ALB   ", 140 + 90 * 3, '4'),
+    newTabBtn("GENRL  ", 50 + 90 * 1, '1'),
+    newTabBtn("VIDEO  ", 50 + 90 * 2, '2'),
+    newTabBtn("USER   ", 50 + 90 * 3, '3'),
+    newTabBtn("ALB    ", 50 + 90 * 4, '4'),
+    newTabBtn("DECK   ", 50 + 90 * 5, '5'),
     WIDGET.new {
         type = 'button',
         pos = { 0, 0 }, x = 60, y = 140, w = 160, h = 60,

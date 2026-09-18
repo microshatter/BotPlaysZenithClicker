@@ -35,6 +35,21 @@ local CRcache = setmetatable({}, {
         return s
     end
 })
+local inputCache = setmetatable({}, {
+    __index = function(t, k)
+        local sum = MATH.sum(k)
+        local s = {}
+        for i = 1, 4 do s[i] = k[i] / sum end
+        t[k] = s
+        return s
+    end
+})
+local inputStatColor = {
+    { COLOR.HEX 'FF7866C0' },
+    { COLOR.HEX 'FFB66DC0' },
+    { COLOR.HEX 'FFEB55C0' },
+    { COLOR.HEX 'A3FF5CC0' },
+}
 
 local function refreshBtn()
     local L = scene.widgetList
@@ -47,7 +62,7 @@ local function refreshBtn()
 end
 
 local function switchPage(p)
-    local combo = Daily.history[p]
+    local combo = GAME.dailyHist[p]
     if LB[combo] and LB[combo].lastUpd then
         if not pageStable[p] then
             if p == 0 then
@@ -90,7 +105,7 @@ function scene.load()
 
     switchPage(0)
 
-    if Daily.cmd and ASYNC.runCmd('submitDaily', Daily.cmd) then
+    if GAME.dailyCMD and ASYNC.runCmd('submitDaily', GAME.dailyCMD) then
         MSG('info', "Re-submitting Daily Challenge score...")
         SFX.play('social_online')
     end
@@ -148,7 +163,7 @@ function scene.update(dt)
         GAME.bgH = math.max(GAME.bgH + (y0 - scroll1) / 355, 0)
     end
     if TASK.lock('text_lastUpdate', .1) then
-        local L = LB[Daily.history[page]]
+        local L = LB[GAME.dailyHist[page]]
         noteText2 = ""
         if L.lastUpd and not pageStable[page] then
             local t = os.time() - L.lastUpd
@@ -162,7 +177,7 @@ function scene.update(dt)
                 noteText2 = "(last update: " .. (math.floor(t / 3600)) .. "h ago)"
             end
         end
-        noteText = noteTextPrefix[page] .. " " .. Daily.historyDisp[page]
+        noteText = noteTextPrefix[page] .. " " .. GAME.dailyHistDisp[page]
     end
     GAME.height = GAME.bgH
 end
@@ -188,9 +203,9 @@ local function drawBtn(x, y, w, h)
     gc_rectangle('fill', x + 3, y + h, w - 3, -3)
 end
 
-local baseX, baseY = 200, 110
-local pw, ph = 1200, 300
-local noW = 160
+local baseX, baseY = 200, 110 -- Panel position
+local pw, ph = 1200, 300      -- Panel width & height
+local noW = 160               -- "No." width
 local entryH = 100
 local entryGap = 10
 local rankColor = {
@@ -216,7 +231,7 @@ function scene.draw()
     gc_rectangle('fill', 30, 190, pw - 30 * 2, 80, 4)
 
     -- List
-    local L = LB[Daily.history[page]]
+    local L = LB[GAME.dailyHist[page]]
     if not L.lastUpd then
         -- Loading
         gc_setColor(clr.D)
@@ -243,11 +258,24 @@ function scene.draw()
         for i = 1, #l do
             local p = l[i]
 
-            -- Number pannel
+            -- Base
             gc_setColor(clr.D)
             drawBtn(0, 0, pw, entryH)
+
+            -- Number pannel
             gc_setColor(0, 0, 0, .15)
             gc_rectangle('fill', 0, 0, noW, entryH)
+
+            -- Input stat
+            if p.input then
+                local data = inputCache[p.input]
+                local x = 0
+                for j = 1, 4 do
+                    gc_setColor(inputStatColor[j])
+                    gc_rectangle('fill', noW + 18 + x * 64, entryH * .926, data[j] * 64, -6)
+                    x = x + data[j]
+                end
+            end
 
             -- Rank icon
             gc_setColor(1, 1, 1)
