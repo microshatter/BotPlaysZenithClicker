@@ -23,7 +23,7 @@ for k, v in next, {
 
 ZENITHA.setMainLoopSpeed(240)
 ZENITHA.setRenderRate(50)
-ZENITHA.setAppInfo("Zenith Clicker", SYSTEM .. " " .. (require 'version'.appVer))
+ZENITHA.setAppInfo("Bot Plays Zenith Clicker", SYSTEM .. " " .. (require 'version'.appVer))
 ZENITHA.setClickDist(62)
 ZENITHA.setFirstScene('joining')
 ZENITHA._cursor.speed = 1600
@@ -1155,25 +1155,7 @@ end
 function CurlRequest(act, data)
     if not curlAvailable or STAT.mod ~= 'vanilla' then return end
     if act == 'submit' then
-        if TestMode then return end
-        if STAT.uid:sub(1, 5) == 'ANON-' then
-            if TASK.lock('anon_submit') then
-                MSG('warn', "Anonymous users cannot submit daily challenge scores", 10 * 1.6)
-            end
-            return
-        end
-        GAME.dailyCMD = genCurlCMD {
-            act = 'submit',
-            hid = STAT.hid,
-            uid = STAT.uid,
-            combo = GAME.comboStr,
-            alt = GAME.roundHeight,
-            time = GAME.gigaTime and MATH.roundUnit(GAME.gigaTime, .001),
-            cr = RankAvailable() and CalculateCR() or 0,
-            input = GAME.inputStat,
-        }
-        ASYNC.runCmd('submitDaily', GAME.dailyCMD)
-        MSG('dark', "Submitting Daily Challenge score...")
+        MSG('warn', "To prevent cheating, submission is not allowed in this build!")
     elseif act == 'fetch' then
         LB[data] = LB[data] or {}
         ASYNC.runCmd('fetchLeaderboard', genCurlCMD {
@@ -1559,6 +1541,8 @@ else
         state = "Enjoying Music",
     }
 end
+
+require 'module/bot'
 
 if FILE.exist('avatar') then
     local suc, res = pcall(GC.newImage, 'avatar')

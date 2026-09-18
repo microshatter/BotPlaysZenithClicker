@@ -1,5 +1,5 @@
 return {
-    ["appName"] = "Zenith Clicker",
+    ["appName"] = "Bot Plays Zenith Clicker",
     ["apkCode"] = 012001,
     ["verCode"] = 012001,
 
