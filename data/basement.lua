@@ -278,7 +278,7 @@ NegEvents = {
     {
         text = 'b4.effStart',
         event = function()
-            GAME.glassCard = true
+            GAME.steadfast = true
             GAME.refreshPieceFstr()
         end
     },
@@ -301,7 +301,7 @@ NegEvents = {
     { h = -450 },
     {
         event = function()
-            GAME.glassCard = false
+            GAME.steadfast = false
             GAME.refreshPieceFstr()
         end
     },
@@ -475,6 +475,14 @@ NegEvents = {
     { h = -1800 },
     {
         event = function()
+            GAME.nightcore = false
+            GAME.slowmo = false
+            GAME.steadfast = false
+            GAME.closeCard = false
+            GAME.fastLeak = false
+            GAME.invisCard = false
+            GAME.invisUI = false
+            GAME.refreshPieceFstr()
             GAME.heightBonus = 0
             GAME.height = -1800
             FloatOnCard = nil

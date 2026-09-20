@@ -50,9 +50,19 @@ local d = {
         desc = "Reached 12600m",
     },
     {
-        id = 'true_expert',
-        name = "True Expert",
-        desc = "Finished a speedrun with rEX & Close Card",
+        id = 'universal_gravitation',
+        name = "Universal Gravitation",
+        desc = "Reached F10 but finished at negative altitude",
+    },
+    {
+        id = 'true_ascetic',
+        name = "True Ascetic",
+        desc = "Finished a speedrun with rNH & Steadfast",
+    },
+    {
+        id = 'true_messy',
+        name = "True Messy",
+        desc = "Finished a speedrun with rMS & Sloooooow-mo",
     },
     {
         id = 'true_master',
@@ -65,6 +75,11 @@ local d = {
         desc = "Finished a speedrun with rVL & Fast Leak",
     },
     {
+        id = 'true_devil',
+        name = "True Devil",
+        desc = "Finished a speedrun with rDH & Close Card",
+    },
+    {
         id = 'true_invis',
         name = "True Invisible",
         desc = "Finished a speedrun with rIN & Invisible Card",
@@ -75,14 +90,14 @@ local d = {
         desc = "Finished a speedrun with rDP & Invisible UI",
     },
     {
-        id = 'cardiac_arrest',
-        name = "Cardiac Arrest",
-        desc = "Die with max HP less than 5",
+        id = 'true_magician',
+        name = "True Magician",
+        desc = "Finished a speedrun (or F10 w/o keyboard) with uAS & all other piece effects",
     },
     {
-        id = 'universal_gravitation',
-        name = "Universal Gravitation",
-        desc = "Reached F10 but finished at negative altitude",
+        id = 'ultraheart',
+        name = "Ultra Heart",
+        desc = "Ended a run with max HP less than 5",
     },
     {
         id = 'rDP_meta',

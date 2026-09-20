@@ -3,7 +3,7 @@ local scene = {}
 
 local maskAlpha, cardShow
 local card = GC.newCanvas(1200, 720)
-local totalBadges = 22
+local totalBadges = #BadgeData
 
 local floor = math.floor
 
@@ -111,7 +111,7 @@ function RefreshProfile()
     GC.print("CLOSE", 1068 - 10, 45 - 3, 0, 1.2)
 
     -- PFP
-    local avatar = AVATAR or TEXTURE.stat.avatar
+    local avatar = GAME.avatar or TEXTURE.stat.avatar
     GC.setColor(1, 1, 1)
     GC.stc_reset()
     GC.stc_rect(30, 0, 120, 120, 6)
@@ -146,7 +146,7 @@ function RefreshProfile()
         local id = badges[i]
         if TEXTURE.stat.badges[id] then
             badgeCount = badgeCount + 1
-            GC.mDraw(TEXTURE.stat.badges[id], 6 + 52 * badgeCount, 242, 0, 50 / math.max(TEXTURE.stat.badges[id]:getDimensions()))
+            GC.mDraw(TEXTURE.stat.badges[id], 6 + 50 * badgeCount, 242, 0, 50 / math.max(TEXTURE.stat.badges[id]:getDimensions()))
             local bd = BadgeData[id] or BadgeData[0]
             scene.widgetList[badgeCount].floatText = bd.name .. "\n" .. bd.desc
             scene.widgetList[badgeCount]:reset()
@@ -221,7 +221,7 @@ function RefreshProfile()
     GC.setColor(1, 1, 1)
     local iconX, iconY = bw / 2 - t50:getWidth() / 2 - 26, bh / 2
     GC.mDraw(TEXTURE.stat.rank[zRank and 0 or rank], iconX, iconY, 0, 62 / rankIcon:getWidth())
-    if zRank and STAT.srActive then
+    if zRank and GAME.speedrunning then
         GC.mDraw(TEXTURE.stat.rank[rank], iconX + 31 / 2, iconY + 31 / 2, 0, 31 / rankIcon:getWidth())
     end
     -- Progress Bar
@@ -286,9 +286,9 @@ function RefreshProfile()
         { t = { textColor, "1-Mod Ascent" },                                                      x = 16,  y = 33 },
         { t = { textColor, "1-Mod Speedrun" },                                                    x = 16,  y = 58 },
         { t = { textColor, "Achievements" },                                                      x = 16,  y = 83 },
-        { t = { scoreColor, CRprogress.f10 .. " / " .. maxComp },                                 x = 190, y = 33 },
-        { t = { scoreColor, CRprogress.sr .. " / " .. maxComp },                                  x = 190, y = 58 },
-        { t = { scoreColor, CRprogress.achvGet .. " / " .. CRprogress.achvAll },                  x = 190, y = 83 },
+        { t = { scoreColor, GAME.CRprog.f10 .. " / " .. maxComp },                                 x = 190, y = 33 },
+        { t = { scoreColor, GAME.CRprog.sr .. " / " .. maxComp },                                  x = 190, y = 58 },
+        { t = { scoreColor, GAME.CRprog.achvGet .. " / " .. GAME.CRprog.achvAll },                  x = 190, y = 83 },
         { t = { textColor, "Best Altitude" },                                                     x = 300, y = 8 },
         { t = { textColor, "Best Speedrun" },                                                     x = 300, y = 33 },
         { t = { textColor, "Zenith Points" },                                                     x = 300, y = 58 },
@@ -434,7 +434,7 @@ for i = 1, totalBadges do
     table.insert(scene.widgetList, i, WIDGET.new {
         name = 'link', type = 'hint',
         text = "",
-        pos = { .5, .5 }, x = -363 + 35 * (i - 1), y = -80, w = 35,
+        pos = { .5, .5 }, x = -363 + 33.7 * (i - 1), y = -80, w = 33,
         color = COLOR.X,
         labelPos = 'topRight',
         floatFontSize = 30,

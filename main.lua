@@ -93,8 +93,8 @@ function ZENITHA.globalEvent.fileDrop(file)
     local data = file:read('data')
     local suc, res = pcall(gc.newImage, data)
     if suc then
-        if AVATAR then AVATAR:release() end
-        AVATAR = res
+        if GAME.avatar then GAME.avatar:release() end
+        GAME.avatar = res
         love.filesystem.write('avatar', data)
         IssueAchv('identity')
         SFX.play('supporter')
@@ -108,9 +108,9 @@ function ZENITHA.globalEvent.fileDrop(file)
 end
 
 function ZENITHA.globalEvent.resize()
-    BgScale = math.max(SCR.w / 1024, SCR.h / 640)
+    GAME.bgK = math.max(SCR.w / 1024, SCR.h / 640)
     StarPS:reset()
-    StarPS:moveTo(0, -GAME.bgH * 2 * BgScale)
+    StarPS:moveTo(0, -GAME.bgH * 2 * GAME.bgK)
     StarPS:setEmissionArea('uniform', SCR.w * .626, SCR.h * .626)
     StarPS:setSizes(SCR.k * 1.626)
     local dt = 1 / StarPS:getEmissionRate()
@@ -243,7 +243,7 @@ WIDGET.setDefaultOption {
 
 function WIDGET._prototype.button:draw()
     gc_push()
-    gc_translate(self._x, self._y + (SCN.cur == 'tower' and self.pos[1] == .5 and DeckPress or 0))
+    gc_translate(self._x, self._y + (SCN.cur == 'tower' and self.pos[1] == .5 and GAME.deckPress or 0))
 
     if self._pressTime > 0 then
         gc_scale(1 - self._pressTime / self._pressTimeMax * .0626)
@@ -364,23 +364,28 @@ Metatable = {
 }
 
 CONF = {
+    sfx = 60,
+    bgm = 100,
+    autoMute = false,
+    bg = true,
+    syscursor = false,
+    fullscreen = true,
+    skin_front = 'zc',
+    skin_back = 'zc',
     keybind = {
         "q", "w", "e", "r", "t", "y", "u", "i", "o",
         "a", "s", "d", "f", "g", "h", "j", "k", "l",
         "space", "z", "x", "c"
     },
-    fullscreen = true,
-    syscursor = false,
+
     cardBrightness = 90,
     bgBrightness = 40,
     boardOpacity = 50,
     damageShakiness = 50,
+    rot3D = SYSTEM == 'Windows' or SYSTEM == 'Linux' or SYSTEM == 'MacOS',
     rot3D_focal = 50,
     rot3D_tilt = 50,
-    bg = true,
-    sfx = 60,
-    bgm = 100,
-    autoMute = false,
+
     oldHitbox = false,
 }
 SR = {}
@@ -394,128 +399,14 @@ UTIL.time("Prepare storage", true)
 TestMode = false
 DiscordState = {}
 Cards = {} ---@type Map<Card>
-CRprogress = {
-    f10 = 0,
-    sr = 0,
-    achvGet = 0,
-    achvAll = 0,
-}
-Daily = {
-    history = {},
-    historyDisp = {},
-    actived = false,
-    available = false,
-    needSubmit = false,
-}
+FloatOnCard = nil ---@type number?
 SHADER = require 'module/shader'
 GAME = require 'module/game'
-
--- Vars: VFX
-
-FloatOnCard = nil ---@type number?
-GigaSpeed = {
-    r = 0,
-    g = 0,
-    b = 0,
-    alpha = 0,
-    bgAlpha = 0,
-    textTimer = false,
-    isTera = false,
-}
-BoardColor = { 1, 1, 1 }
-ImpactGlow = {}
-DeckPress = 0
-ThrobAlpha = {
-    card = 0,
-    bg1 = 0,
-    bg2 = 0,
-}
-Wind = {}
-WindBatch = GC.newSpriteBatch(GC.load { w = 1, h = 1, { 'clear', 1, 1, 1, 1 } }, 260, 'static')
-for i = 1, 62 do
-    Wind[i] = { math.random(), math.random(), MATH.clampInterpolate(1, 0.5, 260, 2.6, i) }
-    WindBatch:add(0, 0)
-end
-BgScale = 1
-
--- Vars: Music
-
----@enum (key) ZC.bgmName
-BgmData = {
-    --[[
-        # F0 (Watchful Eye)           4|4 ♩ = 184         C Minor
-        # F1 (Divine Registration)    4|4 ♩ = 184         C Minor
-        # F2 (Zenith Hotel)           4|4 ♩ = 110         D Major / B Minor
-        # F3 (Empty Prayers)         12|8 ♩.= 120         C Major / A Minor
-        # F4 (Crowd Control)          5|8 ♪ = 180         F♯ Minor
-        # F5 (Phantom Memories)   4|4 6|8 ♩ = 130 ♩.= 130 E Minor
-        # F6 (Echo)                   4|4 ♩ = 65          A Minor
-        # F7 (Cryptic Chemistry)      4|4 ♩ = 120         A+50 Minor
-        # F8 (Chrono Flux)            4|4 ♩ = 150         E Minor
-        # F9 (Broken Record)          4|4 ♩ = 160         E Minor
-        # F10 (Deified Validation)    4|4 ♩ = 98          C Major / C Minor
-        # Hyper (Schnellfeuer Bullet) 4|4 ♩ = 240         C♯ Minor
-    ]]
-    f0    = { meta = '4|4  184 BPM  C Minor           ', bar = 4, bpm = 184, toneFix = 0.0, loop = { 0, 114.7826 } },
-    f1    = { meta = '4|4  184 BPM  C Minor           ', bar = 4, bpm = 184, toneFix = 0.0, loop = { 18.261, 91.304 }, introLen = 1.304, teleport = { -1, 7.826 } },
-    f2    = { meta = '4|4  110 BPM  D Major & B Minor ', bar = 4, bpm = 110, toneFix = -1., loop = { 26.181, 113.454 } },
-    f2r   = { meta = '4|4  110 BPM  D Major & B Minor ', bar = 4, bpm = 110, toneFix = -1., loop = { 26.181, 113.454 } },
-    f3    = { meta = '12|8  120 BPM  C Major & A Minor', bar = 4, bpm = 120, toneFix = -1., loop = { 56, 128 } },
-    f3r   = { meta = '12|8  120 BPM  C Major & A Minor', bar = 4, bpm = 120, toneFix = -1., loop = { 56, 128 } },
-    f4    = { meta = '5|8  180 BPM  F# Minor          ', bar = 5, bpm = 180, toneFix = 1.0, loop = { 13.333, 93.333 } },
-    f4r   = { meta = '5|8  180 BPM  F# Minor          ', bar = 5, bpm = 180, toneFix = 1.0, loop = { 13.333, 93.333 } },
-    f5    = { meta = '4|4 6|8  130 BPM  E Minor       ', bar = 4, bpm = 130, toneFix = -1., loop = { 51.692, 155.077 } },
-    f5r   = { meta = '4|4 6|8  130 BPM  E Minor       ', bar = 4, bpm = 130, toneFix = -1., loop = { 51.692, 155.077 } },
-    f6    = { meta = '4|4  130 BPM  A Minor           ', bar = 4, bpm = 130, toneFix = 2.0, loop = { 29.538, 103.384 } },
-    f6r   = { meta = '4|4  130 BPM  G Minor           ', bar = 4, bpm = 130, toneFix = 0.0, loop = { 29.538, 103.384 } },
-    f7    = { meta = '4|4  120 BPM  A+50c Minor       ', bar = 4, bpm = 120, toneFix = 2.5, bpmData = { 60, 32, 120 }, loop = { 128, 192 } },
-    f7r   = { meta = '4|4  120 BPM  A+50c Minor       ', bar = 4, bpm = 120, toneFix = 2.5, bpmData = { 60, 32, 120 }, loop = { 128, 192 }, teleport = { 8, 32 } },
-    f8    = { meta = '4|4  150 BPM  E Minor           ', bar = 4, bpm = 150, toneFix = -1., loop = { 38.4, 134.4 } },
-    f8r   = { meta = '4|4  150 BPM  E Minor           ', bar = 4, bpm = 150, toneFix = -1., loop = { 38.4, 134.4 } },
-    f9    = { meta = '4|4  160 BPM  E Minor           ', bar = 4, bpm = 160, toneFix = -1., loop = { 36, 144 } },
-    f9r   = { meta = '4|4  160 BPM  E Minor           ', bar = 4, bpm = 160, toneFix = -1., loop = { 36, 144 } },
-    f10   = { meta = '4|4  196 BPM  C Major & C Minor ', bar = 4, bpm = 196, toneFix = 0.0, bpmData = { 49, 19.592, 98 }, loop = { 213.673, 311.632 } },
-    f10r  = { meta = '4|4  196 BPM  C Major & C Minor ', bar = 4, bpm = 196, toneFix = 0.0, bpmData = { 49, 19.592, 98 }, loop = { 213.673, 311.632 } },
-    tera  = { meta = '4|4  240 BPM  C# Minor          ', bar = 4, bpm = 240, toneFix = 1.0, loop = { 76, 140 }, introLen = 2, teleport = { -1, 20 } }, -- 4 endings at 140/142/144/146
-    terar = { meta = '4|4  240 BPM  C# Minor          ', bar = 4, bpm = 240, toneFix = 1.0, loop = { 84 - 15.565, 172 - 15.565 }, teleport = { 0, 18 - 15.565 } },
-    fomg  = { meta = '4|4  180 & 200 BPM  Bb Minor    ', bar = 4, bpm = 200, toneFix = -2., bpmData = { 90, 10.667, 180, 25.333, 200 }, loop = { 38.4 - 11.862, 144 - 11.862 } },
-    fomgr = { meta = '4|4  184 BPM  B Minor & C Minor ', bar = 4, bpm = 184, toneFix = -.5, loop = { 60 / 184 * 76, 60 / 184 * 632 } },
-    b6    = { meta = '4|4  120 BPM  G Minor           ', bar = 4, bpm = 120, toneFix = 2.0, loop = { 16, 224 } },
-}
-for _, v in next, BgmData do
-    v.meta = STRING.trim(v.meta)
-    if not v.bpmData then v.bpmData = { v.bpm } end
-end
-BgmSet = {
-    f0 = {
-        'piano',
-        'arp', 'bass', 'guitar', 'pad', 'staccato', 'violin',
-        'expert', 'rev',
-        'piano2', 'violin2',
-    },
-    f1 = { 'f1', 'f1ex', 'f1rev' },
-}
-BgmPlaying = false ---@type ZC.bgmName | false
-SongNamePlaying = false -- Same as BgmPlaying, but this distinguishes f0(r) and f1(r) for album page
-BgmLooping = false
-BgmNeedSkip = false
-BgmNeedStop = false
-MusicBeat = 0 ---@type number 0-1, envelope: /|/|/|
-
--- Vars: Daily Challenge extras
-
-VALENTINE = false
-VALENTINE_TEXT = "FLOOD THE TOWER SIDE BY SIDE WITH WHAT COULD BE"
-XMAS = false
-ZDAY = false
+local M = GAME.mod
 
 -- Vars: Cursor
 
 MX, MY = -260, 0 -- Mouse position
-CursorProgress = 0
-CursorHide = true
-
-local M = GAME.mod
 
 -- Functions: Cursor
 
@@ -523,7 +414,7 @@ function SetMouseVisible(bool)
     if CONF.syscursor then
         love.mouse.setVisible(bool)
     else
-        CursorHide = not bool
+        GAME.cursorHide = not bool
     end
 end
 
@@ -570,7 +461,6 @@ function InitProfile()
         srTimer_life = 0,
         srTimer_game = 0,
         srMilestone = {},
-        srActive = true,
         joinDate = os.date("%b %Y"),
         hid = os.date("%d%S%m%M%y%H") .. math.random(26000, 42000) .. math.random(42000, 62000),
         uid = "ANON-" .. os.date("%d_") .. math.random(2600, 6200),
@@ -610,18 +500,20 @@ function InitProfile()
     }
 
     ACHV = {}
-
-    AchvNotice = {}
 end
 
 function LoadSave()
     -- Fill BEST, STAT, ACHV tables with actual save data, only called after InitProfile()
     if FILE.exist('stat.luaon') then
-        local stat = FILE.load('stat.luaon', '-luaon')
-        TABLE.update(STAT, stat)
-        if not STAT.srTimer_game then
-            STAT.srTimer_game, STAT.srTimer_life = STAT.totalTime, MATH.roundUnit(STAT.totalTime * 1.26, .001)
+        local stat = FILE.safeLoad('stat.luaon', '-luaon')
+        if stat then
+            TABLE.update(STAT, stat)
+            if not STAT.srTimer_game then
+                STAT.srTimer_game, STAT.srTimer_life = STAT.totalTime, MATH.roundUnit(STAT.totalTime * 1.26, .001)
+            end
         end
+    else
+        GAME.speedrunning = true
     end
     if FILE.exist('best.luaon') then TABLE.update(BEST, FILE.load('best.luaon', '-luaon')) end
     if FILE.exist('achv.luaon') then TABLE.update(ACHV, FILE.load('achv.luaon', '-luaon')) end
@@ -659,7 +551,7 @@ function CalculateCR()
         if hs[id] >= Floors[9].top then s = s + 1 end
         if hs['r' .. id] >= Floors[9].top then s = s + 1 end
     end
-    CRprogress.f10 = s
+    GAME.CRprog.f10 = s
 
     s = 0
     for i = 1, #deck do
@@ -667,7 +559,7 @@ function CalculateCR()
         if sr[id] < 1e26 then s = s + 1 end
         if sr['r' .. id] < 1e26 then s = s + 1 end
     end
-    CRprogress.sr = s
+    GAME.CRprog.sr = s
 
     local p, P = 0, 0
     for i = 1, #Achievements do
@@ -680,7 +572,7 @@ function CalculateCR()
             end
         end
     end
-    CRprogress.achvGet, CRprogress.achvAll = p, P
+    GAME.CRprog.achvGet, GAME.CRprog.achvAll = p, P
 
     local cap = 25000
     local cr = 0
@@ -692,10 +584,10 @@ function CalculateCR()
     cr = cr + 5000 * norm(MATH.icLerp(420, 76.2, STAT.minTime), -.5)
 
     -- Mod completion (3K)
-    cr = cr + 3000 * norm(MATH.icLerp(0, #deck * 2, CRprogress.f10), .62)
+    cr = cr + 3000 * norm(MATH.icLerp(0, #deck * 2, GAME.CRprog.f10), .62)
 
     -- Mod speedrun (2K)
-    cr = cr + 2000 * norm(MATH.icLerp(0, #deck * 2, CRprogress.sr), .62)
+    cr = cr + 2000 * norm(MATH.icLerp(0, #deck * 2, GAME.CRprog.sr), .62)
 
     -- Zenith point (3K)
     cr = cr + 3000 * norm(MATH.icLerp(0, 26e4, STAT.zp), 4.2)
@@ -704,7 +596,7 @@ function CalculateCR()
     cr = cr + 2000 * norm(MATH.icLerp(0, 6200, STAT.dzp), 2.6)
 
     -- Achievement (5K)
-    cr = cr + 5000 * norm(MATH.icLerp(0, CRprogress.achvAll, CRprogress.achvGet), 2.6)
+    cr = cr + 5000 * norm(MATH.icLerp(0, GAME.CRprog.achvAll, GAME.CRprog.achvGet), 2.6)
 
     -- ACHV Wreath (competitive achievement count)
     for i = 1, #Achievements do
@@ -789,7 +681,7 @@ function IssueAchv(id, silent)
     end
 
     ACHV[id] = 0
-    AchvNotice[id] = true
+    GAME.achvNotice[id] = true
     saveAchvTimer = .26
 
     return true
@@ -832,7 +724,7 @@ function SubmitAchv(id, score, silent, realSilent)
 
     ACHV[id] = score
     if not realSilent then
-        AchvNotice[id] = true
+        GAME.achvNotice[id] = true
     end
     saveAchvTimer = .26
 
@@ -854,8 +746,8 @@ end
 function IssueSpeedrunMilestone(id)
     if not STAT.srMilestone[id] then
         local t = MATH.roundUnit(STAT.srTimer_game, .001)
-        STAT.srMilestone[id] = t * (STAT.srActive and 1 or -1)
-        if STAT.srActive then
+        STAT.srMilestone[id] = t * (GAME.speedrunning and 1 or -1)
+        if GAME.speedrunning then
             if t < (SR[id] or 1e99) then
                 SR[id] = t
                 SaveSR()
@@ -885,7 +777,7 @@ end
 -- Functions: Music
 
 function Tone(pitch)
-    return pitch + (URM and M.GV == 2 and 3 or M.GV) + BgmData[BgmPlaying].toneFix
+    return pitch + (URM and M.GV == 2 and 3 or M.GV) + BgmMeta[GAME.bgm_playing].toneFix
 end
 
 function RevMusicMode()
@@ -900,43 +792,43 @@ end
 function PlayBGM(name, force)
     if GAME.teramusic and not force then return end
 
-    SongNamePlaying = name
-    local last = BgmPlaying
+    GAME.bgm_playingName = name
+    local last = GAME.bgm_playing
 
     if GAME.playing and RevMusicMode() then name = name .. 'r' end
     if name == 'f0r' then
-        BgmPlaying = 'f0'
+        GAME.bgm_playing = 'f0'
     elseif name == 'f1r' then -- Note: 'f1ex' is only a track name, not musicID
-        BgmPlaying = 'f1'
+        GAME.bgm_playing = 'f1'
     elseif name == 'b6r' then -- Note: 'b6ex' is only a track name, not musicID
         name = 'b6'
-        BgmPlaying = 'b6'
+        GAME.bgm_playing = 'b6'
     else
-        BgmPlaying = name
+        GAME.bgm_playing = name
     end
 
-    if not BgmData[BgmPlaying] then return end
+    if not BgmMeta[GAME.bgm_playing] then return end
 
-    BgmNeedStop = false
+    GAME.bgm_needStop = false
 
-    if BgmPlaying == 'f0' then
-        BgmLooping = false
-        BgmNeedSkip = BgmData[BgmPlaying].teleport
+    if GAME.bgm_playing == 'f0' then
+        GAME.bgm_looping = false
+        GAME.bgm_needSkip = BgmMeta[GAME.bgm_playing].teleport
 
         BGM.play(BgmSet.f0)
         RefreshBGM(name)
-    elseif BgmPlaying == 'f1' then
-        BgmLooping = BgmData[BgmPlaying].loop
-        BgmNeedSkip = BgmData[BgmPlaying].teleport
+    elseif GAME.bgm_playing == 'f1' then
+        GAME.bgm_looping = BgmMeta[GAME.bgm_playing].loop
+        GAME.bgm_needSkip = BgmMeta[GAME.bgm_playing].teleport
 
         BGM.play(BgmSet.f1, force and '' or '-sdin')
-        local start = math.random(3, 5) * BgmData.f1.introLen
-        BgmNeedSkip[1] = start + BgmData.f1.introLen
+        local start = math.random(3, 5) * BgmMeta.f1.introLen
+        GAME.bgm_needSkip[1] = start + BgmMeta.f1.introLen
         BGM.set('all', 'seek', start)
         RefreshBGM(name)
     elseif name == 'tera' then
-        BgmLooping = BgmData[BgmPlaying].loop
-        BgmNeedSkip = BgmData[BgmPlaying].teleport
+        GAME.bgm_looping = BgmMeta[GAME.bgm_playing].loop
+        GAME.bgm_needSkip = BgmMeta[GAME.bgm_playing].teleport
 
         BGM.play('tera', '-sdin')
         local startFrom
@@ -945,13 +837,13 @@ function PlayBGM(name, force)
             startFrom = tonumber(last:match("%d+"))
             if startFrom then startFrom = startFrom - 1 end
         end
-        local start = (GAME.playing and GAME.floor or startFrom or math.random(0, 9)) * BgmData.tera.introLen
-        BgmNeedSkip[1] = start + BgmData.tera.introLen
+        local start = (GAME.playing and GAME.floor or startFrom or math.random(0, 9)) * BgmMeta.tera.introLen
+        GAME.bgm_needSkip[1] = start + BgmMeta.tera.introLen
         BGM.set('all', 'seek', start)
         RefreshBGM()
     elseif BGM.play(name, force and '' or '-sdin') then
-        BgmLooping = BgmData[BgmPlaying].loop
-        BgmNeedSkip = BgmData[BgmPlaying].teleport
+        GAME.bgm_looping = BgmMeta[GAME.bgm_playing].loop
+        GAME.bgm_needSkip = BgmMeta[GAME.bgm_playing].teleport
         RefreshBGM()
     end
 end
@@ -964,17 +856,17 @@ function RefreshBGM(mode)
     local justBegin = BGM.tell() < 1
     BGM.set('all', 'pitch', pitch, justBegin and 0 or .26)
     BGM.set('all', 'highgain', M.IN == 0 and 1 or M.IN == 1 and .8 or not URM and .626 or .55, justBegin and 0 or .626)
-    if BgmPlaying == 'f0' then
+    if GAME.bgm_playing == 'f0' then
         local revMode = mode == 'f0r' or RevMusicMode()
         BGM.set('all', 'volume', revMode and 0 or 1, 2.6)
         BGM.set('expert', 'volume', M.EX > 0 and 1 or 0, .26)
         BGM.set('piano', 'volume', M.NH == 0 and 1 or M.NH == 1 and .26 or 0)
         BGM.set('piano2', 'pitch', 2 * pitch, 0)
-        BGM.set('piano2', 'volume', (M.DP > 0 or VALENTINE and not revMode) and .626 or 0, .26)
+        BGM.set('piano2', 'volume', (M.DP > 0 or GAME.fes_VALENTINE and not revMode) and .626 or 0, .26)
         BGM.set('violin', 'volume', M.DP == 2 and 1 or 0, .26)
         BGM.set('violin2', 'volume', M.DP == 2 and 1 or 0, .26)
         BGM.set('rev', 'volume', revMode and (M.DP > 0 and .5 or .7) or 0, revMode and 1.6 or 2.6)
-    elseif BgmPlaying == 'f1' then
+    elseif GAME.bgm_playing == 'f1' then
         local revMode = mode == 'f1r' or RevMusicMode()
         BGM.set('f1', 'volume', 1)
         BGM.set('f1ex', 'volume', M.EX > 0 and 1 or 0, 0)
@@ -983,87 +875,87 @@ function RefreshBGM(mode)
 end
 
 function Task_MusicEnd(manual)
-    BgmLooping = false
-    local D = BgmData[BgmPlaying]
+    GAME.bgm_looping = false
+    local D = BgmMeta[GAME.bgm_playing]
     local outroStart
-    if BgmPlaying == 'f1' or BgmPlaying == 'f1r' then
+    if GAME.bgm_playing == 'f1' or GAME.bgm_playing == 'f1r' then
         outroStart = D.loop[2] + 4 * 60 / D.bpm
-        BgmNeedStop = outroStart + 8 * 60 / D.bpm
-    elseif BgmPlaying == 'f2' or BgmPlaying == 'f2r' then
+        GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'f2' or GAME.bgm_playing == 'f2r' then
         outroStart = D.loop[2]
-        BgmNeedStop = outroStart + 8 * 60 / D.bpm
-    elseif BgmPlaying == 'f3' or BgmPlaying == 'f3r' then
+        GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'f3' or GAME.bgm_playing == 'f3r' then
         if BGM.tell() < D.loop[1] then
             outroStart = D.loop[2] + 0
         else
             outroStart = D.loop[2] + 8 * 60 / D.bpm
         end
-        BgmNeedStop = outroStart + 8 * 60 / D.bpm
-    elseif BgmPlaying == 'f4' or BgmPlaying == 'f4r' then
+        GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'f4' or GAME.bgm_playing == 'f4r' then
         outroStart = D.loop[2]
-        BgmNeedStop = outroStart + 10 * 60 / D.bpm
-    elseif BgmPlaying == 'f5' or BgmPlaying == 'f5r' then
+        GAME.bgm_needStop = outroStart + 10 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'f5' or GAME.bgm_playing == 'f5r' then
         outroStart = D.loop[2] + 32 * 60 / D.bpm
-        BgmNeedStop = outroStart + 8 * 60 / D.bpm
-    elseif BgmPlaying == 'f6' or BgmPlaying == 'f6r' then
+        GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'f6' or GAME.bgm_playing == 'f6r' then
         outroStart = D.loop[2]
-        BgmNeedStop = outroStart + 8 * 60 / D.bpm
-    elseif BgmPlaying == 'f7' or BgmPlaying == 'f7r' then
+        GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'f7' or GAME.bgm_playing == 'f7r' then
         outroStart = D.loop[2]
-        BgmNeedStop = outroStart + 8 * 60 / D.bpm
-    elseif BgmPlaying == 'f8' or BgmPlaying == 'f8r' then
+        GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'f8' or GAME.bgm_playing == 'f8r' then
         outroStart = D.loop[2]
-        BgmNeedStop = outroStart + 8 * 60 / D.bpm
-    elseif BgmPlaying == 'f9' or BgmPlaying == 'f9r' then
+        GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'f9' or GAME.bgm_playing == 'f9r' then
         outroStart = D.loop[2]
-        BgmNeedStop = outroStart + 8 * 60 / D.bpm
-    elseif BgmPlaying == 'f10' or BgmPlaying == 'f10r' then
-        local t = BgmPlaying == 'f10' and 4.2 or 6.2
+        GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'f10' or GAME.bgm_playing == 'f10r' then
+        local t = GAME.bgm_playing == 'f10' and 4.2 or 6.2
         if BGM.tell() < 56 * 4 * 60 / D.bpm then
             BGM.stop(t)
             TASK.yieldT(t)
         elseif BGM.tell() < 118 * 4 * 60 / D.bpm then
             BGM.set('all', 'seek', 118 * 4 * 60 / D.bpm)
-            BgmNeedStop = BGM.tell() + 10 * 60 / D.bpm
+            GAME.bgm_needStop = BGM.tell() + 10 * 60 / D.bpm
         elseif BGM.tell() < 154.5 * 4 * 60 / D.bpm then
             BGM.stop(t)
             TASK.yieldT(t)
         else
             outroStart = D.loop[2]
-            BgmNeedStop = outroStart + 8 * 60 / D.bpm
+            GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
         end
-    elseif BgmPlaying == 'tera' then
+    elseif GAME.bgm_playing == 'tera' then
         outroStart = D.loop[2] + math.random(0, 3) * 8 * 60 / D.bpm
-        BgmNeedStop = outroStart + 8 * 60 / D.bpm
-    elseif BgmPlaying == 'terar' then
+        GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'terar' then
         outroStart = D.loop[2] + 96 * 60 / D.bpm
-        BgmNeedStop = outroStart + 30 * 60 / D.bpm
-    elseif BgmPlaying == 'fomg' then
+        GAME.bgm_needStop = outroStart + 30 * 60 / D.bpm
+    elseif GAME.bgm_playing == 'fomg' then
         if BGM.tell() < D.loop[1] then
             outroStart = D.loop[2] + 32 * 60 / D.bpm
-            BgmNeedStop = outroStart + 16 * 60 / D.bpm
+            GAME.bgm_needStop = outroStart + 16 * 60 / D.bpm
         else
             outroStart = D.loop[2]
-            BgmNeedStop = outroStart + 26 * 60 / D.bpm
+            GAME.bgm_needStop = outroStart + 26 * 60 / D.bpm
         end
-    elseif BgmPlaying == 'fomgr' then
+    elseif GAME.bgm_playing == 'fomgr' then
         if BGM.tell() < D.loop[1] then
             outroStart = D.loop[2] + 32 * 60 / D.bpm
-            BgmNeedStop = outroStart + 16 * 60 / D.bpm
+            GAME.bgm_needStop = outroStart + 16 * 60 / D.bpm
         else
             outroStart = D.loop[2]
-            BgmNeedStop = outroStart + 26 * 60 / D.bpm
+            GAME.bgm_needStop = outroStart + 26 * 60 / D.bpm
         end
-    elseif BgmPlaying == 'b6' then
+    elseif GAME.bgm_playing == 'b6' then
         outroStart = D.loop[2] + 32 * 60 / D.bpm
-        BgmNeedStop = outroStart + 8 * 60 / D.bpm
+        GAME.bgm_needStop = outroStart + 8 * 60 / D.bpm
     else
-        BgmNeedStop = BGM.tell() + 4 * 60 / D.bpm
+        GAME.bgm_needStop = BGM.tell() + 4 * 60 / D.bpm
     end
     if outroStart then BGM.set('all', 'seek', outroStart) end
-    BgmLooping, BgmNeedSkip = false, false
-    if BgmNeedStop then
-        repeat TASK.yieldT(.0626) until not BgmNeedStop
+    GAME.bgm_looping, GAME.bgm_needSkip = false, false
+    if GAME.bgm_needStop then
+        repeat TASK.yieldT(.0626) until not GAME.bgm_needStop
     else
         repeat TASK.yieldT(.0626) until not BGM.isPlaying()
     end
@@ -1079,7 +971,7 @@ require 'module/initialize'
 
 local pressValue = 0
 local function starCursor(x, y)
-    if CursorHide or GAME.zenithTraveler then return end
+    if GAME.cursorHide or GAME.zenithTraveler then return end
     gc_translate(x, y)
     gc_scale(1.42)
     gc_rotate(MATH.lerp(-.626, -1.2, pressValue))
@@ -1091,14 +983,14 @@ local function starCursor(x, y)
     gc_setShader(SHADER.coloring)
     gc_setColor(1, .626, .5)
     gc_draw(TEXTURE.star0, -150, 0)
-    if CursorProgress <= .384626 then
-        local t = MATH.interpolate(0, 1, .384626, 0, CursorProgress)
+    if GAME.cursorProg <= .384626 then
+        local t = MATH.interpolate(0, 1, .384626, 0, GAME.cursorProg)
         gc_setColor(.9, .9, .9, t)
         gc_draw(TEXTURE.star0, -150, 0)
         gc_setShader()
     else
         gc_setShader()
-        gc_setColor(1, 1, 1, MATH.iLerp(.384626, 1, CursorProgress))
+        gc_setColor(1, 1, 1, MATH.iLerp(.384626, 1, GAME.cursorProg))
         gc_draw(TEXTURE.star1, -150, 0)
     end
 end
@@ -1118,12 +1010,12 @@ function ReloadTexts()
         local s = h < sep35 and 30 or h < sep57 and 50 or 70
         if f ~= FONT._cache['led'][s] then text:setFont(FONT.get(s)) end
     end
-    for _, text in next, CardHintText do text:setFont(FONT.get(50)) end
+    for _, text in next, GAME.cardHintText do text:setFont(FONT.get(50)) end
     for _, quest in next, GAME.quests do quest.name:setFont(FONT.get(70)) end
     for _, W in next, SCN.scenes[SCN.cur].widgetList do W:reset() end
-    for _, text in next, SRSplitText1 do text:setFont(FONT.get(50)) end
-    for _, text in next, SRSplitText2 do text:setFont(FONT.get(50)) end
-    for _, text in next, SRSplitText3 do text:setFont(FONT.get(30)) end
+    for _, text in next, SRSplitText[1] do text:setFont(FONT.get(50)) end
+    for _, text in next, SRSplitText[2] do text:setFont(FONT.get(50)) end
+    for _, text in next, SRSplitText[3] do text:setFont(FONT.get(30)) end
     if SCN.cur == 'stat' then RefreshProfile() end
     if SCN.cur == 'records' then SCN.scenes.records.load() end
     if SCN.cur == 'leaderboard' then SCN.scenes.leaderboard.load() end
@@ -1196,9 +1088,9 @@ function RefreshDaily()
         STAT.lastDay = os.time()
     end
 
-    Daily.actived = false
-    Daily.available = false
-    Daily.needSubmit = false
+    GAME.dailyActive = false
+    GAME.dailyPlayable = false
+    GAME.dailyReadySubmit = false
     local function modCardSorter(a, b) return ModData.prio_card[a] < ModData.prio_card[b] end
     local now = os.time()
     for x = -4, 0 do
@@ -1227,31 +1119,33 @@ function RefreshDaily()
         end
 
         local sortedDaily = TABLE.copy(cmb)
-        Daily.history[-x] = table.concat(TABLE.sort(sortedDaily))
-        Daily.historyDisp[-x] = table.concat(TABLE.sort(sortedDaily, modCardSorter), " ")
+        GAME.dailyHist[-x] = table.concat(TABLE.sort(sortedDaily))
+        GAME.dailyHistDisp[-x] = table.concat(TABLE.sort(sortedDaily, modCardSorter), " ")
         if x == 0 then
-            Daily.combo = cmb
-            LOG('info', "Today's Daily Challenge: " .. table.concat(Daily.combo, ' '))
+            GAME.dailyCombo = cmb
+            LOG('info', "Today's Daily Challenge: " .. table.concat(GAME.dailyCombo, ' '))
         end
     end
     -- for k, v in next, DailyHistory do print(k, table.concat(v, " ")) end
 
     local isV = os.date('!%d') == '14'
-    if VALENTINE ~= isV then
-        VALENTINE = isV
-        ModData.desc.DP, VALENTINE_TEXT = VALENTINE_TEXT, ModData.desc.DP
-        ValentineTextColor, BaseTextColor = BaseTextColor, ValentineTextColor
-        ValentineShadeColor, BaseShadeColor = BaseShadeColor, ValentineShadeColor
+    if GAME.fes_VALENTINE ~= isV then
+        GAME.fes_VALENTINE = isV
+        ModData.desc.DP, GAME.fes_VALENTINE_TEXT = GAME.fes_VALENTINE_TEXT, ModData.desc.DP
+        GAME.clr_ValentineText, GAME.clr_BaseText = GAME.clr_BaseText, GAME.clr_ValentineText
+        GAME.clr_ValentineShade, GAME.clr_BaseShade = GAME.clr_BaseShade, GAME.clr_ValentineShade
+        GAME.refreshThemeColor()
     end
     local isX = os.date('!%m%d') == '1224' or os.date('!%m%d') == '1225'
-    if XMAS ~= isX then
-        XMAS = isX
-        XMasTextColor, BaseTextColor = BaseTextColor, XMasTextColor
-        XMasShadeColor, BaseShadeColor = BaseShadeColor, XMasShadeColor
+    if GAME.fes_XMAS ~= isX then
+        GAME.fes_XMAS = isX
+        GAME.clr_XMasText, GAME.clr_BaseText = GAME.clr_BaseText, GAME.clr_XMasText
+        GAME.clr_XMasShade, GAME.clr_BaseShade = GAME.clr_BaseShade, GAME.clr_XMasShade
+        GAME.refreshThemeColor()
     end
     local isZ = os.date('!%d') == '26'
-    if ZDAY ~= isZ then
-        ZDAY = isZ
+    if GAME.fes_ZDAY ~= isZ then
+        GAME.fes_ZDAY = isZ
     end
 end
 
@@ -1309,7 +1203,9 @@ local function genCurlCMD(data)
 end
 function CurlRequest(act, data)
     if not curlAvailable or STAT.mod ~= 'vanilla' then return end
-    if act == 'fetch' then
+    if act == 'submit' then
+        MSG('warn', "To prevent cheating, submission is not allowed in this build!")
+    elseif act == 'fetch' then
         LB[data] = LB[data] or {}
         ASYNC.runCmd('fetchLeaderboard', genCurlCMD {
             act = 'fetch',
@@ -1327,14 +1223,14 @@ function Daemon_Slow()
     local length
     while true do
         -- Music syncing
-        if BgmPlaying == 'f0' and BGM.isPlaying() then
+        if GAME.bgm_playing == 'f0' and BGM.isPlaying() then
             length = length or lib[f0List[1]].source:getDuration()
             local t0 = lib[f0List[1]].source:tell() % length
             for i = #f0List, 2, -1 do
                 local obj = lib[f0List[i]]
                 local T = t0
                 if f0List[i] == 'piano2' then T = T * 2 % length end
-                if f0List[i] == 'violin2' then T = (T - 8 * 60 / BgmData.f0.bpm) % length end
+                if f0List[i] == 'violin2' then T = (T - 8 * 60 / BgmMeta.f0.bpm) % length end
                 if math.abs(obj.source:tell() - T) > 0.026 then
                     -- print('Desync', set[i])
                     obj.source:seek(math.max(T, 0))
@@ -1379,7 +1275,7 @@ function Daemon_Slow()
                 else
                     MSG('check', "Daily Challenge submission failed:\nNot a better score", duration)
                 end
-                Daily.cmd = nil
+                GAME.dailyCMD = nil
             else
                 MSG('warn', "Daily Challenge submission failed\nRetry with opening leaderboard page\ndata received from server: " .. msg, duration * 1.26)
                 SFX.play('pause_retry', 1, 0, Tone(-5))
@@ -1399,7 +1295,7 @@ function Daemon_Slow()
                     LB[res.combo].lastUpd = t
                     -- Delete old data
                     for cmb, L in next, LB do
-                        if not TABLE.findAll(Daily.history, cmb) and t - (L.lastUpd or 0) > 86400 * 10 then
+                        if not TABLE.findAll(GAME.dailyHist, cmb) and t - (L.lastUpd or 0) > 86400 * 10 then
                             LB[cmb] = nil
                         end
                     end
@@ -1422,6 +1318,7 @@ function Daemon_Fast()
     local MSisDown = love.mouse.isDown
     local expApproach = MATH.expApproach
     local deckSize = #ModData.deck
+    local GAME = GAME
 
     local startBtnTexts = { "START", "STAR", "STA", "ST", "S", "", "C", "CO", "COM", "COMM", "COMME", "COMMEN", "COMMENC", "COMMENCE" }
     local resetBtnTexts = { "RESET", "RESE", "RES", "RE", "R", "", "S", "SP", "SPI", "SPIN" }
@@ -1433,22 +1330,25 @@ function Daemon_Fast()
     local MSactive = false       -- for skipping meaningless Ypos resets to improve performance
     local t = 0
     while true do
-        if BgmPlaying then
-            local bar = 2 * 60 / BgmData[BgmPlaying].bpm * 4
+        if GAME.bgm_playing then
             local T = BGM.tell()
+            local barCnt = T / (4 * 2 * 60 / BgmMeta[GAME.bgm_playing].bpm)
 
             -- Throb transparency
-            ThrobAlpha.card = max(.626 - 2 * T / bar % 1, .626 - 2 * (T / bar - .375) % 1)
-            ThrobAlpha.bg1 = .626 - 2 * T / bar % 1
-            ThrobAlpha.bg2 = .626 - 2 * (T / bar - 1 / 32) % 1
+            local throb = GAME.throb
+            throb.card = max(.626 - 2 * barCnt % 1, .626 - 2 * (barCnt - .375) % 1)
+            throb.bg1 = .626 - 2 * barCnt % 1
+            throb.bg2 = .626 - 2 * (barCnt - 1 / 32) % 1
+            throb.bg3 = .8 - 4 * barCnt % 1
+            throb.bg4 = .8 - 4 * (barCnt - 1 / 32) % 1
 
             -- Giga anim
-            if GigaSpeed.alpha > 0 then
-                GigaSpeed.r, GigaSpeed.g, GigaSpeed.b = hsv(T / bar % 1, .626, 1)
-                GigaSpeed.bgAlpha = 1 - 4 * T / bar % 1
+            if GAME.giga_a > 0 then
+                GAME.giga_r, GAME.giga_g, GAME.giga_b = hsv(barCnt % 1, .626, 1)
+                GAME.giga_bgAlpha = 1 - 4 * barCnt % 1
             end
 
-            -- Update MusicBeat
+            -- Update beat info
             if T < beatS then
                 -- warp back
                 beatS, beatE = 0, 0
@@ -1457,7 +1357,7 @@ function Daemon_Fast()
             while T > beatE do
                 -- next beat
                 beatS = beatE
-                local dat = BgmData[BgmPlaying].bpmData
+                local dat = BgmMeta[GAME.bgm_playing].bpmData
                 local bpm = dat[1]
                 for i = #dat - 1, 2, -2 do
                     if beatS + .1 >= dat[i] then
@@ -1469,12 +1369,12 @@ function Daemon_Fast()
                 newBeat = true
                 -- if TASK.lock('test', .1) then SFX.play('clearline', .62) end
             end
-            MusicBeat = MATH.icLerp(beatS, beatE, T)
+            GAME.bgm_beat = MATH.icLerp(beatS, beatE, T)
 
             -- MS shaking (each 2 beats)
             if newBeat then
                 if skipNextShuffle then
-                    if M.MS == 0 then
+                    if M.MS == 0 or GAME.steadfast then
                         if MSactive then
                             for i = 1, deckSize do Cards[i].dy_ms = 0 end
                             GAME.refreshLayout()
@@ -1494,31 +1394,31 @@ function Daemon_Fast()
             end
 
             -- BGM time control
-            if BgmLooping then
-                if BGM.tell() > BgmLooping[2] then
-                    local pass = BGM.tell() - BgmLooping[2]
+            if GAME.bgm_looping then
+                if BGM.tell() > GAME.bgm_looping[2] then
+                    local pass = BGM.tell() - GAME.bgm_looping[2]
                     if pass < .26 then
-                        BGM.set('all', 'seek', BgmLooping[1] + pass)
+                        BGM.set('all', 'seek', GAME.bgm_looping[1] + pass)
                     else
-                        BGM.set('all', 'seek', BgmLooping[1])
+                        BGM.set('all', 'seek', GAME.bgm_looping[1])
                     end
                 end
             end
-            if BgmNeedSkip then
-                if BGM.tell() > BgmNeedSkip[1] then
-                    local pass = BGM.tell() - BgmNeedSkip[1]
+            if GAME.bgm_needSkip then
+                if BGM.tell() > GAME.bgm_needSkip[1] then
+                    local pass = BGM.tell() - GAME.bgm_needSkip[1]
                     if pass < .26 then
-                        BGM.set('all', 'seek', BgmNeedSkip[2] + pass)
+                        BGM.set('all', 'seek', GAME.bgm_needSkip[2] + pass)
                     else
-                        BGM.set('all', 'seek', BgmNeedSkip[2])
+                        BGM.set('all', 'seek', GAME.bgm_needSkip[2])
                     end
-                    BgmNeedSkip = false
+                    GAME.bgm_needSkip = false
                 end
             end
-            if BgmNeedStop then
-                if BGM.tell() > BgmNeedStop - .0626 then
+            if GAME.bgm_needStop then
+                if BGM.tell() > GAME.bgm_needStop - .0626 then
                     BGM.stop(.0626)
-                    BgmNeedStop = false
+                    GAME.bgm_needStop = false
                 end
             end
         end
@@ -1546,9 +1446,10 @@ function Daemon_Fast()
                 g = MATH.lLerp(BoardColorData.g, _t) * GAME.boardDim[2]
                 b = MATH.lLerp(BoardColorData.b, _t) * GAME.boardDim[3]
             end
-            BoardColor[1] = MATH.linearApproach(BoardColor[1], r, dt * 2)
-            BoardColor[2] = MATH.linearApproach(BoardColor[2], g, dt * 2)
-            BoardColor[3] = MATH.linearApproach(BoardColor[3], b, dt * 2)
+            local boardClr = GAME.clr_board
+            boardClr[1] = MATH.linearApproach(boardClr[1], r, dt * 2)
+            boardClr[2] = MATH.linearApproach(boardClr[2], g, dt * 2)
+            boardClr[3] = MATH.linearApproach(boardClr[3], b, dt * 2)
         end
 
         -- Mouse holding animation
@@ -1658,14 +1559,20 @@ end
 
 TABLE.update(CONF, FILE.safeLoad('conf.luaon', '-luaon') or NONE)
 TABLE.update(SR, FILE.safeLoad('speedrun.luaon', '-luaon') or NONE)
+if (SR.star_9 or 1e99) < 60 then SR.star_9 = nil end
+if (SR.star_18 or 1e99) < 200 then SR.star_18 = nil end
+if (SR.clicker or 1e99) < 260 then SR.clicker = nil end
+if (SR.mod_up or 1e99) < 200 then SR.mod_up = nil end
+if (SR.mod_rev or 1e99) < 260 then SR.mod_rev = nil end
+if (SR.rank_ss or 1e99) < 260 then SR.rank_ss = nil end
 TABLE.update(LB, FILE.safeLoad('leaderboard.luaon', '-luaon') or NONE)
 InitProfile()
 LoadSave()
 Initialize()
 
-TABLE.update(TextColor, BaseTextColor)
-TABLE.update(ShadeColor, BaseShadeColor)
 RefreshDaily()
+TABLE.update(GAME.clr_text, GAME.clr_BaseText)
+TABLE.update(GAME.clr_shade, GAME.clr_BaseShade)
 TEXTS.version:set(SYSTEM .. (CONF.oldHitbox and " T" or " V") .. (require 'version'.verStr))
 GAME.refreshCurrentCombo()
 
@@ -1688,7 +1595,7 @@ require 'module/bot'
 
 if FILE.exist('avatar') then
     local suc, res = pcall(GC.newImage, 'avatar')
-    if suc then AVATAR = res end
+    if suc then GAME.avatar = res end
 end
 
 if not ACHV.return_to_the_light then

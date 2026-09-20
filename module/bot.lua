@@ -229,7 +229,7 @@ end
 function Bot._updateMenu()
     -- First run: no quests exist yet; pick a starter set & go
     if #GAME.quests == 0 then
-        local dc = Daily.combo
+        local dc = GAME.dailyCombo
         applyCombo(dc)
         -- If nothing to select (all locked or all active), just start
         if not TASK.getLock('cannotStart') then

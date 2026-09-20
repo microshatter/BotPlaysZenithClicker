@@ -1,4 +1,3 @@
-local max, min = math.max, math.min
 local abs, rnd = math.abs, math.random
 local sin, cos = math.sin, math.cos
 local sign, lerp = MATH.sign, MATH.lerp
@@ -47,6 +46,8 @@ function Card.new(d)
         required2 = false,
         inLastCommit = false,
         charge = 0,
+        revJumping = false,
+        bouncing = false,
     }, Card)
     return obj
 end
@@ -59,8 +60,7 @@ end
 
 local completion = GAME.completion
 local KBisDown = love.keyboard.isDown
-local function tween_deckPress(t) DeckPress = 26 * (1 - t) end
-local function tween_expertOn(t) GAME.exTimer = M.EX > 0 and t or (1 - t) end
+local function tween_deckPress(t) GAME.deckPress = 26 * (1 - t) end
 local function task_refreshBGM()
     TASK.yieldT(.1)
     RefreshBGM()
@@ -131,7 +131,7 @@ function Card:setActive(auto, key)
     if not GAME.playing then
         -- not in-game, update various global states
         TASK.unlock('cannotStart')
-        revOn = self.active and (key == 2 or KBisDown('lctrl', 'lalt', 'rctrl', 'ralt'))
+        revOn = self.active and (key == 2 or KBisDown('lctrl', 'lalt', 'rctrl', 'ralt') or next(RevHold))
         if revOn and completion[self.id] == 0 then
             revOn = false
             noSpin = true
@@ -154,8 +154,12 @@ function Card:setActive(auto, key)
             self:revCancel()
         end
         if self.id == 'EX' then
-            TWEEN.new(tween_expertOn):setDuration(M.EX > 0 and .26 or .1):run()
-            TABLE.clear(HoldingButtons)
+            local s = GAME.exTimer
+            local e = M.EX > 0 and 1 or 0
+            TWEEN.new(function(t)
+                GAME.exTimer = lerp(s, e, t)
+            end):setUnique('expertOn'):setEase('OutQuad'):setDuration(M.EX > 0 and .26 or .1):run()
+            TABLE.clear(GAME.buttonHeld)
         elseif self.id == 'IN' then
             for _, C in ipairs(CD) do C:flip() end
             noSpin = M.IN == 1
@@ -219,7 +223,7 @@ function Card:setActive(auto, key)
     if self.active then
         local postfix = revOn and '_reverse' or ''
         SFX.play(
-            GAME.glassCard and 'harddrop' or 'card_select' .. postfix, 1, 0,
+            'card_select' .. postfix, 1, 0,
             key and clampInterpolate(-200, -4.2, 200, 4.2, self.y1 - MY) or MATH.rand(-2.6, 2.6)
         )
         local toneName = 'card_tone_' .. ModData.name[self.id]
@@ -270,15 +274,21 @@ function Card:spin()
         end)
 end
 
-local bounceEase = { 'linear', 'inQuad' }
+local bounceEase = { 'linear', 'inCubic' }
 function Card:bounce(height, duration)
+    if self.revJumping or self.bouncing then return end
     TWEEN.new(function(t)
         self.y1 = self.y + t * (t - 1) * height
-    end):setUnique('bounce_' .. self.id):setEase(bounceEase):setDuration((GAME.slowmo and 2.6 or 1) * duration):run()
+    end):setUnique('bounce_' .. self.id):setTag('bounce_' .. self.id):setEase(bounceEase):setDuration((GAME.slowmo and 2.6 or 1) * duration):run()
+        :setOnKill(function()
+            self.bouncing = false
+        end)
+    self.bouncing = true
 end
 
 function Card:revJump()
-    local h = 355
+    TWEEN.tag_kill('bounce_' .. self.id)
+    local h = 326
     if self.id == 'EX' then
         h = h * (URM and 1.626 or 1.26)
     elseif self.id == 'GV' then
@@ -290,6 +300,7 @@ function Card:revJump()
         self.size = .62 - .355 * t
     end):setUnique('revJump_' .. self.id):setEase(bounceEase):setDuration((GAME.slowmo and 2.6 or 1) * .62 * (h / 355) ^ .5):run()
         :setOnFinish(function()
+            self.revJumping = false
             local currentState = M[self.id]
             if currentState == 2 then
                 TWEEN.new(tween_deckPress):setUnique('DeckPress'):setEase('OutQuad'):setDuration((GAME.slowmo and 2.6 or 1) * .42):run()
@@ -300,16 +311,16 @@ function Card:revJump()
                             if self.id == 'EX' then
                                 r = r * (URM and 12.6 or 2.6)
                             elseif self.id == 'MS' then
-                                r = max(sign((r - .5)) * abs(r - .5) ^ .3333 / 1.5874 + .5, 0)
+                                r = math.max(sign((r - .5)) * abs(r - .5) ^ .3333 / 1.5874 + .5, 0)
                             elseif self.id == 'GV' then
-                                r = r * (URM and .0626 or .26)
+                                r = r * (URM and .126 or .26)
                             end
                             C:bounce(lerp(62, 420, r), lerp(.42, .62, r))
                         end
                     end
                 end
                 local color = ModData.color[self.id]
-                table.insert(ImpactGlow, {
+                table.insert(GAME.impactGlow, {
                     r = (color[1] - .26) * .8,
                     g = (color[2] - .26) * .8,
                     b = (color[3] - .26) * .8,
@@ -347,16 +358,22 @@ function Card:revJump()
                 end
             end
         end)
+        :setOnKill(function()
+            self.revJumping = false
+        end)
+    self.revJumping = true
     local rot = self.id == 'AS' and 3 * 3.1416 or 3.1416
     local ease = self.id == 'GV' and 'OutQuart' or 'OutBack'
+    local s = self.r_2d_rev
     TWEEN.new(function(t)
-        self.r_2d_rev = t * rot
-    end):setUnique('spin2D_' .. self.id):setEase(ease):setDuration((GAME.slowmo and 2.6 or 1) * .52):run()
+        self.r_2d_rev = lerp(s, rot, t)
+    end):setUnique('spin2D_' .. self.id):setEase(ease):setDuration((GAME.slowmo and 2.6 or 1.06) * .52):run()
 end
 
 function Card:revCancel()
+    local s = self.r_2d_rev
     TWEEN.new(function(t)
-        self.r_2d_rev = (1 - t) * 3.1416
+        self.r_2d_rev = lerp(s, 0, t)
     end):setUnique('spin2D_' .. self.id):setEase('OutQuart'):setDuration((GAME.slowmo and 2.6 or 1) * .26):run()
 end
 
@@ -381,7 +398,9 @@ local frame2W, frame2H = activeFrame2:getWidth() / 2, activeFrame2:getHeight() /
 
 function Card:update(dt)
     self.x1 = expApproach(self.x1, self.x, dt * 16)
-    self.y1 = expApproach(self.y1, self.y + self.dy_ms, dt * 16)
+    if not (self.revJumping or self.bouncing) then
+        self.y1 = expApproach(self.y1, self.y + self.dy_ms, dt * 16)
+    end
     self.float = expApproach(self.float, CD[FloatOnCard] == self and 1 or 0, dt * 12)
     if self.burn then
         self.burn = self.burn - dt
@@ -391,43 +410,17 @@ function Card:update(dt)
         end
     end
     if self.charge > 0 then
-        self.charge = max(self.charge - dt, 0)
+        self.charge = math.max(self.charge - dt, 0)
     end
 end
 
-local gc = love.graphics
-local gc_setCanvas, gc_clear = gc.setCanvas, gc.clear
-local gc_push, gc_pop = gc.push, gc.pop
-local gc_origin, gc_translate, gc_scale = gc.origin, gc.translate, gc.scale
-local gc_setColor, gc_setAlpha = gc.setColor, GC.setAlpha
-local gc_setShader, gc_setLineWidth = GC.setShader, gc.setLineWidth
-local gc_draw, gc_mDraw, gc_mRect = gc.draw, GC.mDraw, GC.mRect
+local gc_setCanvas, gc_clear = GC.setCanvas, GC.clear
+local gc_push, gc_pop = GC.push, GC.pop
+local gc_origin, gc_translate, gc_rotate, gc_scale, gc_shear = GC.origin, GC.translate, GC.rotate, GC.scale, GC.shear
+local gc_setColor, gc_setAlpha = GC.setColor, GC.setAlpha
+local gc_setShader, gc_setLineWidth = GC.setShader, GC.setLineWidth
+local gc_draw, gc_polygon, gc_mDraw = GC.draw, GC.polygon, GC.mDraw
 local gc_blurCircle, gc_setBlendMode = GC.blurCircle, GC.setBlendMode
-
-local iconFrame
-xpcall(function()
-    local suc, res = FILE.safeLoad('customAssets/mod_polygon.luaon', '-luaon')
-    if not suc then error("!" .. res) end
-    iconFrame = res
-    assert(iconFrame, "")
-    assert(type(iconFrame) == 'table', "!Invalid mod_polygon data")
-    assert(#iconFrame % 2 == 0, "!mod_polygon must have an even number of points")
-    assert(#iconFrame <= 52, "!mod_polygon must have at most 26 points")
-    for i = 1, #iconFrame do assert(type(iconFrame[i]) == 'number', "!mod_polygon must be a list of numbers") end
-    assert(next(iconFrame, #iconFrame) == nil, "!mod_polygon must be a pure array")
-end, function(msg)
-    if msg:find("!") then LOG('warn', msg:match("!(.*)")) end
-    local x, y = 156.5, -245.5
-    local r = 65
-    iconFrame = {
-        x - r, y - r,
-        x + 7, y - r,
-        x + r, y - 7,
-        x + r, y + r,
-        x - 12, y + r,
-        x - r, y + 12,
-    }
-end)
 
 local burnColor = {
     uAS = { 1, .42, .26 },
@@ -472,12 +465,6 @@ do
     tempMesh:setVertexMap(unpack(vMap))
 end
 tempMesh:setTexture(tempCanvas)
-local glassCardText = setmetatable({}, {
-    __index = function(t, k)
-        t[k] = GC.newText(FONT.get(50), k)
-        return t[k]
-    end
-})
 local function rotate_point_around_axis(x, y, z, ax, ay, az, theta)
     local len = (ax * ax + ay * ay + az * az) ^ .5
     local kx, ky, kz = ax / len, ay / len, az / len
@@ -492,27 +479,26 @@ local function rotate_point_around_axis(x, y, z, ax, ay, az, theta)
 end
 
 function Card:draw()
-    local texture = TEXTURE[self.id]
+    local _3D = CONF.rot3D
     local playing = GAME.playing
     local img, img2
     local rot3D = self.r_3d + self.r_3d_in
     local faceUp
-    local glassW, glassH = 480, 660
     local finalRot = playing and self.r_2d_shake or self.r_2d_rev + self.r_2d_shake
     local finalSize = self == CD[FloatOnCard] and M.EX > 0 and love.mouse.isDown(1, 2) and .9 * self.size or self.size
 
     -- Select texture
     if self.lock and self.lockfull then
-        img = texture.lock
+        img = TEXTURE.card[CONF.skin_front].lock[self.id]
     else
         if M.IN == 2 then
-            img = texture.back
+            img = TEXTURE.card[CONF.skin_back].back[self.id]
         else
             faceUp = math.floor(rot3D / 3.1416 + .5) % 2 == 0
-            img = faceUp and texture.front or texture.back
+            img = faceUp and TEXTURE.card[CONF.skin_front].front[self.id] or TEXTURE.card[CONF.skin_back].back[self.id]
         end
         if self.lock then
-            img2 = texture.lock
+            img2 = TEXTURE.card[CONF.skin_front].lock[self.id]
         end
     end
 
@@ -587,142 +573,123 @@ function Card:draw()
     end
 
     -- Calculate 3D mesh
-    local f = 2600 - 20 * CONF.rot3D_focal
-    local t = CONF.rot3D_tilt * .0042
-    local t2 = CONF.rot3D_tilt * 20
-    local float = FloatOnCard == self.initOrder
-    for i = 1, #meshVerticePosTemplate do
-        local x, y, z = meshVerticePosTemplate[i][1], meshVerticePosTemplate[i][2], 0
+    if _3D then
+        local f = 2600 - 20 * CONF.rot3D_focal
+        local t1 = CONF.rot3D_tilt * .0042
+        local t2 = CONF.rot3D_tilt * 20
+        local float = self == CD[FloatOnCard]
+        for i = 1, #meshVerticePosTemplate do
+            local x, y, z = meshVerticePosTemplate[i][1], meshVerticePosTemplate[i][2], 0
 
-        -- Real 3D rotation
-        -- rotate around X
-        local tilt = sin(self.r_3d) * t
-        local c, s = cos(tilt), sin(tilt)
-        y, z = y * c - z * s, y * s + z * c
-        -- rotate around Y
-        c, s = cos(rot3D), sin(rot3D)
-        x, z = x * c - z * s, x * s + z * c
+            -- Real 3D rotation
+            -- rotate around X
+            local tilt = sin(self.r_3d) * t1
+            local c, s = cos(tilt), sin(tilt)
+            y, z = y * c - z * s, y * s + z * c
+            -- rotate around Y
+            c, s = cos(rot3D), sin(rot3D)
+            x, z = x * c - z * s, x * s + z * c
 
-        if float and t2 > 0 then
-            -- float tilting
-            local dx, dy, dz = MX - self.x, MY - self.y, 0 -- Cursor vector
-            local dist = (dx * dx + dy * dy) ^ .5
-            if dist > 1 then
-                local nx, ny, nz = 0, 0, 1 -- Normal vector
-                x, y, z = rotate_point_around_axis(
-                    x, y, z,
-                    -dy, dx, 0, -- simplified cross product
-                    -- ny * dz - nz * dy,
-                    -- nz * dx - nx * dz,
-                    -- nx * dy - ny * dx,
-                    -dist / t2
-                )
+            if float and t2 > 0 then
+                -- float tilting
+                local dx, dy = MX - self.x, MY - self.y -- Cursor vector
+                -- local dx, dy, dz = MX - self.x, MY - self.y, 0 -- Cursor vector
+                local dist = (dx * dx + dy * dy) ^ .5
+                if dist > 1 then
+                    -- local nx, ny, nz = 0, 0, 1 -- Normal vector
+                    x, y, z = rotate_point_around_axis(
+                        x, y, z,
+                        -dy, dx, 0, -- simplified cross product
+                        -- ny * dz - nz * dy,
+                        -- nz * dx - nx * dz,
+                        -- nx * dy - ny * dx,
+                        -dist / t2
+                    )
+                end
             end
-        end
 
-        meshVertices[i][1], meshVertices[i][2] = x / (z / f + 1), y / (z / f + 1)
+            meshVertices[i][1], meshVertices[i][2] = x / (z / f + 1), y / (z / f + 1)
+        end
+        tempMesh:setVertices(meshVertices)
+    else
+        -- 2D approach for performance
+        gc_push()
+        gc_translate(self.x1, self.y1)
+        gc_rotate(finalRot - sin(rot3D) * CONF.rot3D_tilt * .0026)
+        if self == CD[FloatOnCard] then
+            local dx, dy = (MX - self.x1) / (240 * self.size), (MY - self.y1) / (330 * self.size)
+            local d = (abs(dx) - abs(dy)) * .026
+            gc_scale(math.min(1, 1 - d), math.min(1, 1 + d))
+            local D = -sign(dx * dy) * abs(dx * dy) ^ .626 * CONF.rot3D_tilt * .00042
+            gc_shear(D, D)
+            gc_scale(1 - abs(D))
+        end
+        gc_scale(cos(rot3D) * finalSize, finalSize)
     end
-    tempMesh:setVertices(meshVertices)
 
     -- Hint layer
-    if a1 or a2 then
+    if (a1 or a2) and not GAME.steadfast then
+        if _3D then
+            gc_push('all')
+            gc_setCanvas(tempCanvas)
+            gc_clear()
+            gc_origin()
+            gc_translate(canvasW / 2, canvasH / 2)
+            gc_setBlendMode('alpha', 'premultiplied')
+        end
+
+        if a1 then
+            gc_setColor(r1, g1, b1, a1)
+            gc_draw(activeFrame, -frame1W, -frame1H)
+        end
+        if a2 then
+            gc_setColor(r2, g2, b2, a2)
+            gc_draw(activeFrame2, -frame2W, -frame2H)
+        end
+
+        if _3D then
+            gc_pop()
+            gc_draw(tempMesh, self.x1, self.y1, finalRot, finalSize)
+        end
+    end
+
+    -- Card layer
+    if _3D then
         gc_push('all')
         gc_setCanvas(tempCanvas)
         gc_clear()
         gc_origin()
         gc_translate(canvasW / 2, canvasH / 2)
-
-        gc_setBlendMode('alpha', 'premultiplied')
-        if GAME.glassCard then
-            if a1 then
-                gc_setLineWidth(52)
-                gc_setColor(r1, g1, b1, a1)
-                gc_mRect('line', 0, 0, glassW + 52, glassH + 52, 52)
-            end
-            if a2 then
-                gc_setLineWidth(26)
-                gc_setColor(r2, g2, b2, a2)
-                gc_mRect('line', 0, 0, glassW + 26, glassH + 26, 39)
-            end
-        else
-            if a1 then
-                gc_setColor(r1, g1, b1, a1)
-                gc_draw(activeFrame, -frame1W, -frame1H)
-            end
-            if a2 then
-                gc_setColor(r2, g2, b2, a2)
-                gc_draw(activeFrame2, -frame2W, -frame2H)
-            end
-        end
-        gc_pop()
-        gc_draw(tempMesh, self.x1, self.y1, finalRot, finalSize)
     end
 
-    -- Card layer
-    gc_push('all')
-    gc_setCanvas(tempCanvas)
-    gc_clear()
-    gc_origin()
-    gc_translate(canvasW / 2, canvasH / 2)
-
-    if GAME.glassCard then
-        -- Fill
-        gc_setColor((faceUp and ModData.textColor or ModData.color)[self.id])
-        gc_setAlpha((CONF.cardBrightness / 100) ^ 2 * .872)
-        gc_mRect('fill', 0, 0, glassW, glassH, 26)
-
-        -- Text
-        gc_setColor(
-            self.burn and (
-                URM and M.AS == 2 and burnColor.uAS or
-                GAME.time % .16 < .08 and burnColor.AS1 or burnColor.AS2
-            ) or CLR.W
-        )
-        FONT.set(50)
-        if faceUp then
-            gc_scale(2.6)
-            gc_mDraw(glassCardText[self.id])
-            gc_scale(1 / 2.6)
-        else
-            gc_scale(2)
-            gc_mDraw(glassCardText["TETR.IO"])
-            gc_scale(1 / 2)
-        end
-
-        -- Outline
-        gc_setColor(1, 1, 1, .62)
-        gc_setLineWidth(4)
-        gc_mRect('line', 0, 0, glassW - 3, glassH - 3, 26)
-    else
-        -- Card
-        if not GAME.invisCard then
-            if self.burn then
-                if URM and M.AS == 2 then
-                    gc_setColor(burnColor.uAS)
-                else
-                    gc_setColor(
-                        GAME.time % .16 < .08 and
-                        (faceUp and COLOR.lR or COLOR.R) or
-                        (faceUp and COLOR.lY or COLOR.Y)
-                    )
-                end
+    -- Card
+    if not GAME.invisCard then
+        if self.burn then
+            if URM and M.AS == 2 then
+                gc_setColor(burnColor.uAS)
             else
-                local b = CONF.cardBrightness / 100
-                gc_setColor(b, b, b)
+                gc_setColor(
+                    GAME.time % .16 < .08 and
+                    (faceUp and COLOR.lR or COLOR.R) or
+                    (faceUp and COLOR.lY or COLOR.Y)
+                )
             end
-            gc_draw(img, -img:getWidth() / 2, -img:getHeight() / 2)
-            if img2 then
-                gc_draw(img2, -img2:getWidth() / 2, -img2:getHeight() / 2)
-            end
+        else
+            local b = CONF.cardBrightness / 100
+            gc_setColor(b, b, b)
         end
+        gc_draw(img, -img:getWidth() / 2, -img:getHeight() / 2)
+        if img2 then
+            gc_draw(img2, -img2:getWidth() / 2, -img2:getHeight() / 2)
+        end
+    end
 
-        -- Rev Throb
-        if not playing and not self.upright and GAME.revDeckSkin and faceUp then
-            gc_setColor(1, 1, 1, ThrobAlpha.card)
-            gc_setShader(SHADER.throb)
-            gc_draw(img, -img:getWidth() / 2, -img:getHeight() / 2)
-            gc_setShader()
-        end
+    -- Rev Throb
+    if not playing and not self.upright and GAME.revDeckSkin and faceUp then
+        gc_setColor(1, 1, 1, GAME.throb.card)
+        gc_setShader(SHADER.throb)
+        gc_draw(img, -img:getWidth() / 2, -img:getHeight() / 2)
+        gc_setShader()
     end
 
     -- Star
@@ -757,12 +724,6 @@ function Card:draw()
         end
         -- Float star
         if not self.active then
-            if revMastery then
-                gc_setColor(.5, .5, .5, t)
-                gc_setBlendMode('add')
-                gc_blurCircle(blur, -x, -y, cr)
-                gc_setBlendMode('alpha')
-            end
             gc_setColor(1, 1, 1, t)
             local star1 = TEXTURE[self.id == 'DP' and STAT.clicker and 'star2' or 'star1']
             gc_mDraw(star1, x, y, ang, lerp(.16, .42, t))
@@ -772,26 +733,29 @@ function Card:draw()
 
     -- Icon cover
     if faceUp then
-        gc_setColor((GAME.glassCard and ModData.color or ModData.textColor)[self.id])
+        gc_setColor(ModData.textColor[self.id])
         local active = playing and self.inLastCommit or not playing and self.active
+        local frame = TEXTURE.card[CONF.skin_front].iconFrame
         if M.EX == 0 then
             if active then
                 gc_setLineWidth(6)
-                gc.polygon('line', iconFrame)
+                gc_polygon('line', frame)
                 gc_setAlpha(.62)
-                gc.polygon('fill', iconFrame)
+                gc_polygon('fill', frame)
             else
                 gc_setLineWidth(4)
-                gc.polygon('line', iconFrame)
+                gc_polygon('line', frame)
             end
         elseif active then
             gc_setAlpha(.62)
-            gc.polygon('fill', iconFrame)
+            gc_polygon('fill', frame)
         end
     end
 
     gc_pop()
-    gc_draw(tempMesh, self.x1, self.y1, finalRot, finalSize)
+    if _3D then
+        gc_draw(tempMesh, self.x1, self.y1, finalRot, finalSize)
+    end
 end
 
 return Card

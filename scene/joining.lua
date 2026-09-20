@@ -36,12 +36,13 @@ function scene.update(dt)
                 for i = 1, #PieceData do
                     GAME[PieceData[i].id] = false
                 end
+                TWEEN.tag_kill('zpChange')
+                TEXTS.zpChange:set("")
                 InitProfile()
                 LoadSave()
                 URM = false
-                GAME.pieceEffectID = 0
                 GAME.floor = 0
-                STAT.srActive = SCN.args[1] == 'reset'
+                GAME.speedrunning = SCN.args[1] == 'reset'
                 Initialize(true)
                 GAME.clearResultStat()
                 collectgarbage()
