@@ -78,7 +78,7 @@ jobs:
           build-list: ./data/ ./assets/ ./scene/ ./module/ ./Zenitha/ ./conf.lua ./main.lua ./version.lua
           package-path: ${{ env.CORE_LOVE_PACKAGE_PATH }}
       - name: Upload core love package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.CORE_LOVE_ARTIFACT_NAME }}
           path: ${{ env.CORE_LOVE_PACKAGE_PATH }}
@@ -87,7 +87,7 @@ jobs:
           mkdir -p ${{ env.OUTPUT_FOLDER }}
           mv ${{ env.CORE_LOVE_PACKAGE_PATH }} ${{ env.OUTPUT_FOLDER }}/${{ steps.process-app-name.outputs.product-name }}.love
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.get-info.outputs.base-name }}_Core
           path: ${{ env.OUTPUT_FOLDER }}/${{ steps.process-app-name.outputs.product-name }}.love
@@ -157,7 +157,7 @@ jobs:
           version-code: ${{ needs.get-info.outputs.version-code }}
           output-folder: ${{ env.OUTPUT_FOLDER }}
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.get-info.outputs.base-name }}_Android_release
           path: ${{ env.OUTPUT_FOLDER }}/${{ steps.process-app-name.outputs.product-name }}-release.apk
@@ -212,7 +212,7 @@ jobs:
           version-code: ${{ needs.get-info.outputs.version-code }}
           output-folder: ${{ env.OUTPUT_FOLDER }}
       - name: Upload debug APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.get-info.outputs.base-name }}_Android_debug
           path: ${{ env.OUTPUT_FOLDER }}/${{ steps.process-app-name.outputs.product-name }}-debug.apk
@@ -255,12 +255,12 @@ jobs:
           product-name: ${{ steps.process-app-name.outputs.product-name }}
           output-folder: ${{ env.OUTPUT_FOLDER }}
       - name: Upload AppImage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.get-info.outputs.base-name }}_Linux_AppImage
           path: ${{ env.OUTPUT_FOLDER }}/${{ steps.process-app-name.outputs.product-name }}.AppImage
       - name: Upload Debian artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.get-info.outputs.base-name }}_Linux_Debian
           path: ${{ env.OUTPUT_FOLDER }}/${{ steps.process-app-name.outputs.product-name }}.deb
@@ -318,12 +318,12 @@ jobs:
           rm globalizeFS.js
           popd
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.get-info.outputs.base-name }}_Web
           path: ${{ env.OUTPUT_FOLDER }}
       - name: Deploy to GitHub Pages
-        uses: crazy-max/ghaction-github-pages@v4
+        uses: crazy-max/ghaction-github-pages@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -380,17 +380,17 @@ jobs:
           installer-languages: ChineseSimplified.isl ChineseTraditional.isl English.isl Spanish.isl French.isl Indonesian.isl Japanese.isl Portuguese.isl
           output-folder: ${{ env.OUTPUT_FOLDER }}
       - name: Upload 32-bit artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.get-info.outputs.base-name }}_Windows_x86
           path: ${{ env.OUTPUT_FOLDER }}/${{ steps.process-app-name.outputs.product-name }}_x86.zip
       - name: Upload 64-bit artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.get-info.outputs.base-name }}_Windows_x64
           path: ${{ env.OUTPUT_FOLDER }}/${{ steps.process-app-name.outputs.product-name }}_x64.zip
       - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.get-info.outputs.base-name }}_Windows_installer
           path: ${{ env.OUTPUT_FOLDER }}/${{ steps.process-app-name.outputs.product-name }}_installer.exe
@@ -431,7 +431,7 @@ jobs:
       ACTION_TYPE: Release
     steps:
       - name: Cleanup
-        uses: geekyeggo/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v6
         with:
           name: ${{ env.CORE_LOVE_ARTIFACT_NAME }}
       - name: Update Release Text
