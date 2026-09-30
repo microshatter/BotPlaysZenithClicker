@@ -136,7 +136,7 @@ jobs:
             f.write('bundle-id=io.github.microshatter.' + re.sub(r'[^A-Za-z0-9]+', '_', '${{ needs.get-info.outputs.app-name }}') + '\n')
             f.write('product-name=' + re.sub(r'[^A-Za-z0-9]+', '-', '${{ needs.get-info.outputs.app-name }}') + '\n')
       - name: Download core love package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.CORE_LOVE_ARTIFACT_NAME }}
       - name: Build Android packages
@@ -195,7 +195,7 @@ jobs:
             f.write('bundle-id=io.github.microshatter.' + re.sub(r'[^A-Za-z0-9]+', '_', '${{ needs.get-info.outputs.app-name }}') + '\n')
             f.write('product-name=' + re.sub(r'[^A-Za-z0-9]+', '-', '${{ needs.get-info.outputs.app-name }}') + '\n')
       - name: Download core love package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.CORE_LOVE_ARTIFACT_NAME }}
       - name: Build Android debug packages
@@ -238,7 +238,7 @@ jobs:
             f.write('bundle-id=io.github.microshatter.' + product_name + '\n')
             f.write('product-name=' + product_name + '\n')
       - name: Download core love package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.CORE_LOVE_ARTIFACT_NAME }}
       - name: Build Linux packages
@@ -293,7 +293,7 @@ jobs:
         with:
           submodules: recursive
       - name: Download core love package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.CORE_LOVE_ARTIFACT_NAME }}
       - name: Build web packages
@@ -350,7 +350,7 @@ jobs:
           with open(os.getenv('GITHUB_OUTPUT'), 'a') as f:
             f.write('product-name=' + re.sub(r'[^A-Za-z0-9]+', '_', '${{ needs.get-info.outputs.app-name }}') + '\n')
       - name: Download core love package
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.CORE_LOVE_ARTIFACT_NAME }}
       - name: Update Windows template
