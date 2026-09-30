@@ -1,0 +1,311 @@
+name: 💩 Code Mountain (Shit) Analysis
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main, master, dev/* ]
+
+jobs:
+  shit-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: latest
+
+      - name: Install fuck-u-code
+        run: |
+          npm install -g eff-u-code
+          fuck-u-code --help >/dev/null
+
+      - name: Run code analysis & detailed scoring
+        id: analyze
+        run: |
+          # Note: when piping, check PIPESTATUS[0], otherwise a failed analyze could be masked as success by tee
+          fuck-u-code analyze --verbose --top 10 2>&1 | tee analysis.log
+          ANALYZE_EXIT=${PIPESTATUS[0]}
+
+          if [ "$ANALYZE_EXIT" -ne 0 ]; then
+            echo "::error::fuck-u-code analyze failed, please check analysis.log"
+            exit "$ANALYZE_EXIT"
+          fi
+
+          # Prefer the structured JSON field to avoid terminal text format changes breaking parsing
+          SCORE=""
+          if [ -f analysis.json ]; then
+            SCORE=$(grep -oP '"overallScore"\s*:\s*\K[0-9.]+' analysis.json | head -1)
+          fi
+
+          if [ -z "$SCORE" ]; then
+            SCORE=$(grep -oP '"overallScore"\s*:\s*\K[0-9.]+' analysis.log | head -1)
+          fi
+          if [ -z "$SCORE" ]; then
+            SCORE=$(grep -oP '(Overall|Issue)\s*Score[:：]\s*\K[0-9.]+' analysis.log | head -1)
+          fi
+
+          if [ -z "$SCORE" ]; then
+            echo "::error::Could not parse a score from analysis.json / analysis.log, refusing to fall back to 0 to avoid false negatives"
+            exit 1
+          fi
+
+          echo "Cleaness raw score: $SCORE"
+          SCORE=$(echo "100 - $SCORE" | bc -l)
+          echo "After calculation: $SCORE"
+
+          # 11-tier fine-grained levels (matching the source QualityLevels)
+          EMOJI=""
+          STATUS=""
+          COLOR=""
+          DESC=""
+          ADVICE=""  # New: specific advice
+          ALLOW_MERGE="true"
+
+          if (( $(echo "$SCORE < 5" | bc -l) )); then
+            EMOJI="🌱"
+            STATUS="Clean"
+            COLOR="brightgreen"
+            DESC="Immaculate code, a pleasure to behold"
+            ADVICE="Keep it up — you are a breath of fresh air in the coding world, the pride of code purists"
+            ALLOW_MERGE="true"
+            echo "✨ Result: Clean level - this is art, not code"
+
+          elif (( $(echo "$SCORE < 15" | bc -l) )); then
+            EMOJI="🌸"
+            STATUS="Slightly Stinky"
+            COLOR="green"
+            DESC="Basically fine, but a little unsavory"
+            ADVICE="Keep it up — you are a breath of fresh air in the coding world, the pride of code purists"
+            ALLOW_MERGE="true"
+            echo "🌸 Result: Slightly stinky - fresh air, with a hint of flower"
+
+          elif (( $(echo "$SCORE < 25" | bc -l) )); then
+            EMOJI="😐"
+            STATUS="Moderately Messy"
+            COLOR="yellowgreen"
+            DESC="Slightly smelly, some airing recommended"
+            ADVICE="Keep it up — you are a breath of fresh air in the coding world, the pride of code purists"
+            ALLOW_MERGE="true"
+            echo "😐 Result: Moderately messy - teenage code in need of some discipline"
+
+          elif (( $(echo "$SCORE < 40" | bc -l) )); then
+            EMOJI="😷"
+            STATUS="Bad"
+            COLOR="yellow"
+            DESC="The code is starting to smell, maintain with caution"
+            ADVICE="This code is like a rebellious teenager; it needs some discipline to mature"
+            ALLOW_MERGE="true"
+            echo "😷 Result: Bad level - a face mask is recommended when reading"
+
+          elif (( $(echo "$SCORE < 55" | bc -l) )); then
+            # This tier has 3 sub-levels
+            if (( $(echo "$SCORE < 45" | bc -l) )); then
+              SUB="Light"
+              DESC="The code mountain is just starting to ferment; the stench is emerging but it can still be saved"
+            elif (( $(echo "$SCORE < 50" | bc -l) )); then
+              SUB="Moderate"
+              DESC="The code mountain has formed; opening the window won't save it, maintain with caution"
+            else
+              SUB="Heavy"
+              DESC="Severe code-mountain pollution, maintenance difficulty has soared, refactoring is urgent"
+            fi
+
+            EMOJI="💩"
+            STATUS="${SUB} Code Mountain"
+            COLOR="orange"
+            ADVICE="This code is like a rebellious teenager; it needs some discipline to mature"
+            ALLOW_MERGE="true"
+            echo "💩 Result: ${SUB} code mountain level (40-54 range) - the code is starting to emit indescribable odors"
+
+          elif (( $(echo "$SCORE < 65" | bc -l) )); then
+            EMOJI="🤕"
+            STATUS="Disaster"
+            COLOR="red"
+            DESC="Fun to write, hell to maintain"
+            ADVICE="The only way out is to delete the repo and run away, or seal it and maintain it in the next life"
+            ALLOW_MERGE="false"
+            echo "::warning::🤕 Result: Disaster level - maintaining it is like raiding a dungeon, refactoring recommended"
+
+          elif (( $(echo "$SCORE < 75" | bc -l) )); then
+            EMOJI="☣️"
+            STATUS="Severe Disaster"
+            COLOR="#DC143C"  # crimson
+            DESC="Toxic gas everywhere, a gas mask is recommended"
+            ADVICE="The only way out is to delete the repo and run away, or seal it and maintain it in the next life"
+            ALLOW_MERGE="false"
+            echo "::warning::☣️ Result: Severe disaster level - the code is now a relic"
+
+          elif (( $(echo "$SCORE < 85" | bc -l) )); then
+            EMOJI="🧟"
+            STATUS="Very Bad"
+            COLOR="#8B0000"  # dark red
+            DESC="No programmer who enters ever comes out alive"
+            ADVICE="The only way out is to delete the repo and run away, or seal it and maintain it in the next life"
+            ALLOW_MERGE="false"
+            echo "::error::🧟 Result: Very bad level - the code is like a zombie, dead but not gone"
+
+          elif (( $(echo "$SCORE < 95" | bc -l) )); then
+            EMOJI="☢️"
+            STATUS="Extreme Disaster"
+            COLOR="purple"
+            DESC="A crime against humanity, cremation recommended"
+            ADVICE="The only way out is to delete the repo and run away, or seal it and maintain it in the next life"
+            ALLOW_MERGE="false"
+            echo "::error::☢️ Result: Extreme disaster level - it is recommended to give up treatment"
+
+          elif (( $(echo "$SCORE < 100" | bc -l) )); then
+            EMOJI="🪦"
+            STATUS="Abandoned"
+            COLOR="#4B0082"  # indigo
+            DESC="A legacy jointly created by generations of engineers, impossible to maintain"
+            ADVICE="The only way out is to delete the repo and run away, or seal it and maintain it in the next life"
+            ALLOW_MERGE="false"
+            echo "::error::🪦 Result: Abandoned level - it is recommended to delete the repo directly"
+
+          else  # full score 100
+            EMOJI="👑💩"
+            STATUS="Ultimate Disaster"
+            COLOR="black"
+            DESC="Thrilling to write, unrecognizable to your own mother to maintain"
+            ADVICE="The only way out is to delete the repo and run away, or seal it and maintain it in the next life"
+            ALLOW_MERGE="false"
+            echo "::error::👑💩 Result: Ultimate disaster level - this is a masterpiece, a museum exhibit"
+          fi
+
+          # Output to environment
+          echo "score=$SCORE" >> $GITHUB_OUTPUT
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "emoji=$EMOJI" >> $GITHUB_OUTPUT
+          echo "color=$COLOR" >> $GITHUB_OUTPUT
+          echo "desc=$DESC" >> $GITHUB_OUTPUT
+          echo "advice=$ADVICE" >> $GITHUB_OUTPUT
+          echo "allow_merge=$ALLOW_MERGE" >> $GITHUB_OUTPUT
+
+          # Generate a summary with detailed advice
+          echo "### $EMOJI Code Mountain Analysis Summary (11-tier)" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Overall Score** | $SCORE / 100 |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Code Mountain Level** | $STATUS |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Level Description** | $DESC |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Merge Suggestion** | $([ "$ALLOW_MERGE" == "true" ] && echo "✅ Allowed" || echo "❌ Blocked") |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**💡 Optimization Advice**" >> $GITHUB_STEP_SUMMARY
+          echo "$ADVICE" >> $GITHUB_STEP_SUMMARY
+
+      # Show the detailed level in the PR comment
+      - name: PR comment (vibe edition)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const score = parseFloat('${{ steps.analyze.outputs.score }}');
+            const status = '${{ steps.analyze.outputs.status }}';
+            const emoji = '${{ steps.analyze.outputs.emoji }}';
+            const desc = '${{ steps.analyze.outputs.desc }}';
+            const allowMerge = '${{ steps.analyze.outputs.allow_merge }}';
+
+            // Overall vibe assessment (not about specific code, just the feeling)
+            let vibe = '';
+            let nextMove = '';
+
+            if (score < 10) {
+              vibe = 'Refreshing as a spring breeze, as if kissed by an angel';
+            } else if (score < 20) {
+              vibe = 'Crisp and pleasant, like morning dew at first sniff';
+            } else if (score < 30) {
+              vibe = 'Mildly fragrant, with an occasional hint of sourness';
+            } else if (score < 40) {
+              vibe = 'A bit smelly, but not enough to knock anyone out';
+            } else if (score < 50) {
+              vibe = 'The stench hits you in the face, a face mask is recommended';
+            } else if (score < 60) {
+              vibe = 'Toxic fumes everywhere, code review feels like torture';
+            } else if (score < 70) {
+              vibe = 'Overpowering stench, maintainers have started coughing blood';
+            } else if (score < 80) {
+              vibe = 'Biohazard, write your will before taking over';
+            } else if (score < 90) {
+              vibe = 'A nuclear waste site, hazmat suits required for maintenance';
+            } else {
+              vibe = 'A calamity-level tumor, one glance shortens your life by ten years';
+            }
+
+            if (score < 30) {
+              nextMove = 'Keep it up — you are a breath of fresh air in the coding world, the pride of code purists';
+            } else if (score < 60) {
+              nextMove = 'This code is like a rebellious teenager; it needs some discipline to mature';
+            } else {
+              nextMove = 'The only way out is to delete the repo and run away, or seal it and maintain it in the next life';
+            }
+
+            const mergeBadge = allowMerge === 'true'
+              ? '![Merge: Allowed](https://img.shields.io/badge/merge-allowed-brightgreen)'
+              : '![Merge: Blocked](https://img.shields.io/badge/merge-blocked-red)';
+
+            const body = '## ' + emoji + ' Code Mountain Analysis Report ' + mergeBadge + '\n\n' +
+              '🎯 **Overview**\n\n' +
+              '> "' + desc + '"\n\n' +
+              '| Dimension | Data |\n' +
+              '|:------|:------|\n' +
+              '| **Code Mountain Index** | `' + score.toFixed(2) + ' / 100` |\n' +
+              '| **Code Mountain Level** | **' + status + '** |\n' +
+              '| **Check time** | ' + new Date().toLocaleString('en-US', { timeZone: 'UTC' }) + ' |\n\n' +
+              '### 🎭 Overall Impression\n' +
+              vibe + '\n\n' +
+              '### 🧭 Next Step\n' +
+              nextMove + '\n\n' +
+              '---\n\n' +
+              '**📥 Detailed Data**\n' +
+              '- [View the full analysis report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\n' +
+              '- [Download the Markdown report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts)\n\n' +
+              '*Automatically checked by [fuck-u-code](https://github.com/Done-0/fuck-u-code) · This comment does not represent a human opinion*';
+
+            // Get existing comments
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            // Find the bot's previous code mountain report comment
+            const botComment = comments.data.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Code Mountain Analysis Report')
+            );
+
+            if (botComment) {
+              // If a comment already exists, update it
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              // If none exists, create a new comment
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
+
+      # Optionally block the merge based on the level
+      - name: Merge gate (optional)
+        if: steps.analyze.outputs.allow_merge != 'true'
+        run: |
+          echo "❌ Code mountain index ${{ steps.analyze.outputs.score }} has reached the '${{ steps.analyze.outputs.status }}' level"
+          echo "   ${{ steps.analyze.outputs.desc }}"
+          echo "::error::Code quality does not meet the standard, refactoring is recommended before merging"
+          # To block merging, uncomment the line below:
+          # exit 1
