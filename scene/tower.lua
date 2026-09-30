@@ -101,7 +101,7 @@ local function keyTrigger(key)
         if C then
             if GAME.playing or not C.lock then
                 GAME.nixPrompt('keep_no_keyboard')
-                GAME.inputStat[3] = GAME.inputStat[3] + 1
+                GAME.inputStat[2] = GAME.inputStat[2] + 1
                 FloatOnCard = bindID
                 SetMouseVisible(false)
                 MX, MY = C.x1 + math.random(-126, 126), C.y1 + math.random(-260, 260)
@@ -131,7 +131,7 @@ local function keyTrigger(key)
         elseif bindID then
             if bindID == 19 then
                 GAME.nixPrompt('keep_no_keyboard')
-                GAME.inputStat[3] = GAME.inputStat[3] + 1
+                GAME.inputStat[2] = GAME.inputStat[2] + 1
                 local W = scene.widgetList.start
                 W._pressTime = W._pressTimeMax * 2
                 W._hoverTime = W._hoverTimeMax
@@ -143,7 +143,7 @@ local function keyTrigger(key)
                 end
             elseif bindID == 20 then
                 GAME.nixPrompt('keep_no_keyboard')
-                GAME.inputStat[3] = GAME.inputStat[3] + 1
+                GAME.inputStat[2] = GAME.inputStat[2] + 1
                 local W = scene.widgetList.reset
                 W._pressTime = W._pressTimeMax * 2
                 W._hoverTime = W._hoverTimeMax
@@ -153,7 +153,7 @@ local function keyTrigger(key)
                 if not GAME.achv_noKeyboardH then GAME.achv_noKeyboardH = GAME.roundHeight end
             elseif bindID == 21 or bindID == 22 then
                 GAME.nixPrompt('keep_no_keyboard')
-                GAME.inputStat[3] = GAME.inputStat[3] + 1
+                GAME.inputStat[2] = GAME.inputStat[2] + 1
                 scene.mouseDown(MX, MY, bindID == 21 and 1 or 2)
                 scene.mouseUp(MX, MY, bindID == 21 and 1 or 2)
                 if not GAME.achv_noKeyboardH then GAME.achv_noKeyboardH = GAME.roundHeight end
@@ -277,7 +277,6 @@ function scene.mouseMove(x, y, _, dy)
     else
         if TASK.lock('mouse_trigger_cooldown', .26) then
             GAME.nixPrompt('keep_no_mouse')
-            GAME.inputStat[1] = GAME.inputStat[1] + 1
         end
         mouseMove(x, y)
     end
@@ -305,7 +304,7 @@ function scene.mouseDown(x, y, k)
     if k == 3 then return true end
     buttonHeld['mouse' .. k] = true
     GAME.nixPrompt('keep_no_mouse')
-    GAME.inputStat[2] = GAME.inputStat[2] + 1
+    GAME.inputStat[1] = GAME.inputStat[1] + 1
 
     if getBtnPressed() > 1 + (URM and M.VL == 2 and 0 or floor(M.VL / 2)) then return true end
     if M.EX == 0 then
@@ -356,7 +355,7 @@ function scene.touchDown(x, y, id)
     buttonHeld['touch' .. tostring(id)] = true
     if M.EX == 0 then
         SFX.play('move')
-        GAME.inputStat[4] = GAME.inputStat[4] + 1
+        GAME.inputStat[3] = GAME.inputStat[3] + 1
         mouseTrigger(x, y, next(RevHold) and 2 or 1)
     else
         SFX.play('rotate')
@@ -372,7 +371,7 @@ function scene.touchUp(x, y, id)
     if not buttonHeld['touch' .. tostring(id)] then return end
     buttonHeld['touch' .. tostring(id)] = nil
     if M.EX > 0 then
-        GAME.inputStat[4] = GAME.inputStat[4] + 1
+        GAME.inputStat[3] = GAME.inputStat[3] + 1
         mouseTrigger(x, y, next(RevHold) and 2 or 1)
     end
 end
@@ -569,7 +568,6 @@ local koMsgColor = {
 }
 local inputStatColor = {
     { COLOR.HEX 'FF7866C0' },
-    { COLOR.HEX 'FFB66DC0' },
     { COLOR.HEX 'FFEB55C0' },
     { COLOR.HEX 'A3FF5CC0' },
 }
@@ -1025,7 +1023,7 @@ function scene.draw()
         -- Input stats
         local w = TEXTS.endHeight:getWidth() * 1.8
         local x = 0
-        for i = 1, 4 do
+        for i = 1, 3 do
             gc_setColor(inputStatColor[i])
             gc_rectangle('fill', (x - .5) * w, 188, w * GAME.inputStatNorm[i], 3)
             x = x + GAME.inputStatNorm[i]
@@ -1051,24 +1049,24 @@ function scene.overDraw()
 
     gc_translate(0, GAME.deckPress)
 
+    -- Glow
+    if GAME.impactGlow[1] then
+        gc_setBlendMode('add')
+        local glow = GAME.impactGlow
+        for i = 1, #glow do
+            local L = glow[i]
+            gc_setColor(L.r, L.g, L.b, L.t)
+            GC.blurCircle(0, L.x, L.y, 120 * (L.t + 1.6) ^ 2)
+        end
+        gc_setBlendMode('alpha')
+    end
+
     if not GAME.invisUI then
         -- Current combo
         if not GAME.playing or M.IN < 2 then
             gc_setColor(TextColor)
             if M.IN == 2 then gc_setAlpha(.42 + .26 * sin(t * 2.6)) end
             gc_mDraw(TEXTS.mod, 800, 396, 0, min(1, 760 / TEXTS.mod:getWidth()))
-        end
-
-        -- Glow
-        if GAME.impactGlow[1] then
-            gc_setBlendMode('add')
-            local glow = GAME.impactGlow
-            for i = 1, #glow do
-                local L = glow[i]
-                gc_setColor(L.r, L.g, L.b, L.t)
-                GC.blurCircle(0, L.x, L.y, 120 * (L.t + 1.6) ^ 2)
-            end
-            gc_setBlendMode('alpha')
         end
 
         -- GigaSpeed Timer
@@ -1742,7 +1740,20 @@ local function button_reset()
 end
 local function activeEffect(id, n)
     Cards[id]:setActive(true)
-    if n == 8 then
+    Cards[id].required = true
+    GAME.finishTime = love.timer.getTime()
+    if n == 0 then
+        for i = 1, #PieceData do GAME[PieceData[i].id] = false end
+        GAME.refreshPieceFstr()
+        URM = false
+        ultraStateChange()
+        SFX.play('allclear')
+        MSG({
+            cat = 'bright',
+            str = "ALL CLEAR",
+            time = 2.6,
+        })
+    elseif n == 8 then
         URM = not URM
         SFX.play(URM and 'exchange' or 'undo')
         ultraStateChange()
@@ -1752,35 +1763,22 @@ local function activeEffect(id, n)
             time = 2.6,
         })
     else
-        if n == 0 then
-            for i = 1, #PieceData do GAME[PieceData[i].id] = false end
-            GAME.refreshPieceFstr()
-            URM = false
-            ultraStateChange()
-            SFX.play('allclear')
+        local effID = PieceData[n].id
+        GAME[effID] = not GAME[effID]
+        GAME.refreshPieceFstr()
+        if GAME[effID] then
+            SFX.play(PieceData[n].sfx, 1, 0, Tone(6))
             MSG({
-                cat = 'bright',
-                str = "ALL CLEAR",
+                cat = 'dark',
+                str = PieceData[n].popup,
                 time = 2.6,
             })
         else
-            local effID = PieceData[n].id
-            GAME[effID] = not GAME[effID]
-            GAME.refreshPieceFstr()
-            if GAME[effID] then
-                SFX.play(PieceData[n].sfx, 1, 0, Tone(6))
-                MSG({
-                    cat = 'dark',
-                    str = PieceData[n].popup,
-                    time = 2.6,
-                })
-            else
-                SFX.play('spinend')
-                SFX.play('floor')
-                SFX.play('hold')
-            end
-            SFX.play('card_slide_' .. math.random(4))
+            SFX.play('spinend')
+            SFX.play('floor')
+            SFX.play('hold')
         end
+        SFX.play('card_slide_' .. math.random(4))
     end
 end
 local PieceEffectOrder = {
@@ -1794,19 +1792,30 @@ local PieceEffectOrder = {
     { 'AS', 0 },
     { 'DP', 5 },
 }
-local function checkPieceEffect()
+local function task_revEffect()
     for _, effect in next, PieceEffectOrder do
         if M[effect[1]] == 2 then
             activeEffect(effect[1], effect[2])
-            -- if GAME.completion[effect[1]] == 2 then
-            --     activeEffect(effect[1], effect[2])
-            -- else
-            --     Cards[effect[1]]:shake()
-            --     SFX.play('no')
-            -- end
-            return true
+            GAME.refreshLayout()
+            RefreshBGM()
+            GAME.refreshRPC()
+            return
+        else
+            Cards[effect[1]].required = false
+            SFX.play('harddrop')
+            table.insert(GAME.impactGlow, {
+                r = .1,
+                g = .26,
+                b = .62,
+                x = Cards[effect[1]].x,
+                y = Cards[effect[1]].y,
+                t = .62,
+                tk = 1 / (GAME.slowmo and 6.2 or 2.6),
+            })
+            TASK.yieldT(GAME.slowmo and .062 or .0355)
         end
     end
+    SFX.play('damage_alert', .8)
 end
 scene.widgetList = {
     WIDGET.new {
@@ -1991,13 +2000,8 @@ scene.widgetList = {
         floatText = "", -- Dynamic text
         onPress = function(k)
             if k == 2 or KBisDown('lctrl', 'rctrl') or next(RevHold) then
-                if checkPieceEffect() then
-                    GAME.refreshLayout()
-                    RefreshBGM()
-                    GAME.refreshRPC()
-                else
-                    SFX.play('no')
-                end
+                TASK.removeTask_code(task_revEffect)
+                TASK.new(task_revEffect)
             end
         end,
         visibleFunc = function() return not GAME.playing and TABLE.countAll(GAME.completion, 0) < 9 end,

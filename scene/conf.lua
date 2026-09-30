@@ -468,6 +468,9 @@ function scene.draw()
         -- Sliders
         drawSliderComponents(140, "EFFECT VOLUME", "QUIET (F3)", "LOUD (F3)", CONF.sfx)
         drawSliderComponents(220, "MUSIC VOLUME", "QUIET (F4)", "LOUD (F4)", CONF.bgm)
+        if CONF.customCursor then
+            drawSliderComponents(580, "CURSOR SIZE", "SMALL", "LARGE", CONF.cursorSize)
+        end
         -- Keybind
         if bindBuffer then
             setFont(30)
@@ -528,7 +531,7 @@ function scene.draw()
 
         local playTime = BGM.tell()
 
-        gc_ucs_move(50, 120)
+        gc_ucs_move(50, 100)
 
         -- Time
         setFont(30)
@@ -696,27 +699,38 @@ pages[1] = {
         disp = function() return CONF.bg end,
         code = function() CONF.bg = not CONF.bg end,
     },
-    WIDGET.new { -- star
-        type = 'checkBox',
-        fillColor = clr.cbFill,
-        frameColor = clr.cbFrame,
-        textColor = clr.T, text = "STAR FORCE",
-        x = baseX + 55, y = baseY + 430,
-        disp = function() return not CONF.syscursor end,
-        code = function()
-            CONF.syscursor = not CONF.syscursor
-            SetMouseVisible(true)
-            ApplySettings()
-        end,
-    },
     WIDGET.new { -- fullscreen
         type = 'checkBox',
         fillColor = clr.cbFill,
         frameColor = clr.cbFrame,
         textColor = clr.T, text = "FULLSCREEN  (F11)",
-        x = baseX + 55, y = baseY + 500,
+        x = baseX + 55, y = baseY + 430,
         disp = function() return CONF.fullscreen end,
         code = WIDGET.c_pressKey 'f11',
+    },
+    WIDGET.new { -- star
+        type = 'checkBox',
+        fillColor = clr.cbFill,
+        frameColor = clr.cbFrame,
+        textColor = clr.T, text = "CRYSTAL CURSOR",
+        x = baseX + 55, y = baseY + 500,
+        disp = function() return CONF.customCursor end,
+        code = function()
+            CONF.customCursor = not CONF.customCursor
+            SetMouseVisible(true)
+            ApplySettings()
+            scene.widgetList.cursorSize:setVisible()
+        end,
+    },
+    WIDGET.new { -- cursor size
+        name = 'cursorSize', type = 'slider',
+        x = baseX + 240 + 85, y = baseY + 580, w = 400,
+        axis = { 50, 120, 5 },
+        frameColor = 'dD', fillColor = clr.D,
+        disp = function() return CONF.cursorSize end,
+        code = function(value) CONF.cursorSize = value end,
+        sound_drag = 'rotate',
+        visibleFunc = function() return page == 1 and CONF.customCursor end,
     },
     WIDGET.new { -- keybind
         type = 'button',
@@ -1183,7 +1197,7 @@ for i = 1, 3 do
     })
 end
 
-local albumY = baseY + 250
+local albumY = baseY + 226
 pages[4] = {
     WIDGET.new { -- title
         type = 'text', alignX = 'left',
@@ -1234,7 +1248,7 @@ pages[4] = {
     },
     WIDGET.new { -- no loop
         type = 'button',
-        x = baseX + 450, y = albumY + 80, w = 200, h = 50,
+        x = baseX + 450, y = albumY + 75, w = 200, h = 50,
         color = clr.L,
         fontSize = 30, textColor = clr.LT, text = "NO LOOPS",
         onClick = function()
@@ -1252,7 +1266,7 @@ local function albumBtn(param)
 end
 for i = 0, 10 do
     albumBtn {
-        x = baseX + 75 + 75 * i, y = baseY + 410,
+        x = baseX + 75 + 75 * i, y = baseY + 400,
         color = bgmColors['f' .. i],
         text = "" .. i,
         onClick = function()
@@ -1264,7 +1278,7 @@ for i = 0, 10 do
         end,
     }
     albumBtn {
-        x = baseX + 75 + 75 * i, y = baseY + 490,
+        x = baseX + 75 + 75 * i, y = baseY + 480,
         color = bgmColors['f' .. i .. 'r'],
         text = "R" .. i,
         onClick = function()
@@ -1275,21 +1289,21 @@ for i = 0, 10 do
     }
 end
 albumBtn {
-    x = baseX + 450 - 140, y = baseY + 610, w = 120,
+    x = baseX + 450 - 140, y = baseY + 600, w = 120,
     color = bgmColors.tera,
     text = "TERA",
     onClick = function() PlayBGM('tera') end,
     visibleFunc = function() return page == 4 and ACHV.blazing_speed end,
 }
 albumBtn {
-    x = baseX + 450 + 140, y = baseY + 610, w = 120,
+    x = baseX + 450 + 140, y = baseY + 600, w = 120,
     color = bgmColors.terar,
     text = "TERAR",
     onClick = function() PlayBGM('terar') end,
     visibleFunc = function() return page == 4 and ACHV.blazing_speed and BEST.highScore.rEX >= Floors[9].top end,
 }
 albumBtn {
-    x = baseX + 450, y = baseY + 610, w = 120,
+    x = baseX + 450, y = baseY + 600, w = 120,
     color = bgmColors.fomg,
     fontSize = 50,
     text = "FΩ",
@@ -1297,7 +1311,7 @@ albumBtn {
     visibleFunc = function() return page == 4 and STAT.maxHeight >= 6200 end,
 }
 albumBtn {
-    x = baseX + 450, y = baseY + 610 + 140, w = 120,
+    x = baseX + 450, y = baseY + 600 + 140, w = 120,
     color = bgmColors.fomgr,
     fontSize = 50,
     text = "FΩR",
@@ -1305,7 +1319,7 @@ albumBtn {
     visibleFunc = function() return page == 4 and STAT.clicker and #GetClickerStar() >= 6 end,
 }
 albumBtn {
-    x = baseX + 840, y = baseY + 770, w = 80,
+    x = baseX + 840, y = baseY + 760, w = 80,
     color = bgmColors.b6,
     fontSize = 30,
     text = "6?",
@@ -1321,7 +1335,7 @@ pages[5] = {
         fontSize = 30, textColor = clr.LT, text = "< PREV",
         onClick = function()
             skinCtrl = false
-            love.keypressed('left')
+            scene.keyDown('left')
             skinCtrl = nil
         end,
         visibleFunc = function() return page == 5 and TABLE.find(skinList.skin_front, skinPage.skin_front) > 1 end
@@ -1333,7 +1347,7 @@ pages[5] = {
         fontSize = 30, textColor = clr.LT, text = "SELECT",
         onClick = function()
             skinCtrl = false
-            love.keypressed(CONF.keybind[19])
+            scene.keyDown(CONF.keybind[19])
             skinCtrl = nil
         end,
         visibleFunc = function() return page == 5 and skinPage.skin_front ~= CONF.skin_front and skinUnlocked[skinPage.skin_front] end
@@ -1345,7 +1359,7 @@ pages[5] = {
         fontSize = 30, textColor = clr.LT, text = "NEXT >",
         onClick = function()
             skinCtrl = false
-            love.keypressed('right')
+            scene.keyDown('right')
             skinCtrl = nil
         end,
         visibleFunc = function() return page == 5 and TABLE.find(skinList.skin_front, skinPage.skin_front) < #skinList.skin_front end
@@ -1358,7 +1372,7 @@ pages[5] = {
         fontSize = 30, textColor = clr.LT, text = "< PREV",
         onClick = function()
             skinCtrl = true
-            love.keypressed('left')
+            scene.keyDown('left')
             skinCtrl = nil
         end,
         visibleFunc = function() return page == 5 and TABLE.find(skinList.skin_back, skinPage.skin_back) > 1 end
@@ -1370,7 +1384,7 @@ pages[5] = {
         fontSize = 30, textColor = clr.LT, text = "SELECT",
         onClick = function()
             skinCtrl = true
-            love.keypressed(CONF.keybind[19])
+            scene.keyDown(CONF.keybind[19])
             skinCtrl = nil
         end,
         visibleFunc = function() return page == 5 and skinPage.skin_back ~= CONF.skin_back and skinUnlocked[skinPage.skin_back] end
@@ -1382,7 +1396,7 @@ pages[5] = {
         fontSize = 30, textColor = clr.LT, text = "NEXT >",
         onClick = function()
             skinCtrl = true
-            love.keypressed('right')
+            scene.keyDown('right')
             skinCtrl = nil
         end,
         visibleFunc = function() return page == 5 and TABLE.find(skinList.skin_back, skinPage.skin_back) < #skinList.skin_back end
@@ -1395,7 +1409,7 @@ local function newTabBtn(text, y, key, visFunc)
         pos = { 1, 0 }, x = -60, y = y, w = 160, h = 60,
         color = { CLR.HEX '383838' },
         fontSize = 30, text = text, textColor = 'DL',
-        onClick = function() love.keypressed(key) end,
+        onClick = function() scene.keyDown(key) end,
         visibleFunc = visFunc,
     }
 end
@@ -1412,7 +1426,7 @@ local tab = {
         pos = { 0, 0 }, x = 60, y = 140, w = 160, h = 60,
         color = { .15, .15, .15 },
         fontSize = 30, text = "    BACK", textColor = 'DL',
-        onClick = function() love.keypressed('escape') end,
+        onClick = function() scene.keyDown('escape') end,
     },
 }
 

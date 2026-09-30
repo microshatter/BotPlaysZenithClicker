@@ -182,8 +182,8 @@ local GAME = {
     heightBonus = 0,
     peakRank = 0,
     rankTimer = {}, ---@type number[]
-    inputStat = { 0, 0, 0, 0 },     -- Move (mouse) / Click (mouse) / Keyboard / Touch
-    inputStatNorm = { 0, 0, 0, 0 }, -- normalized inputStat
+    inputStat = { 0, 0, 0 },     -- Mouse / Keyboard / Touch
+    inputStatNorm = { 0, 0, 0 }, -- normalized inputStat
 
     -- Time
     time = 0,
@@ -327,17 +327,11 @@ function GAME.getHand(real)
         --     end
         -- end
     else
-        -- FASTER
-        for i = 1, #MD.deck do
+        for i = 1, #CD do
             if CD[i].active then
                 ins(list, CD[i].id)
             end
         end
-        -- for _, C in ipairs(CD) do
-        --     if C.active then
-        --         ins(list, C.id)
-        --     end
-        -- end
     end
     return list
 end
@@ -2676,8 +2670,8 @@ function GAME.finish(reason)
             end
         end
 
-        local sum = math.max(MATH.sumAll(GAME.inputStat), 1)
-        for i = 1, 4 do GAME.inputStatNorm[i] = GAME.inputStat[i] / sum end
+        local sum = math.max(MATH.sum(GAME.inputStat), 1)
+        for i = 1, 3 do GAME.inputStatNorm[i] = GAME.inputStat[i] / sum end
 
         -- ZP
         local zpGain = abs(GAME.roundHeight) * GAME.comboZP

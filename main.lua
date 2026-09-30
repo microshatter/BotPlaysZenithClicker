@@ -146,8 +146,6 @@ function ZENITHA.globalEvent.keyDown(key, isRep)
     end
 end
 
-function ZENITHA.globalEvent.quit() SaveStat() end
-
 local function task_autoSoundOff()
     coroutine.yield()
     while true do
@@ -321,8 +319,9 @@ CONF = {
     bgm = 100,
     autoMute = false,
     bg = true,
-    syscursor = false,
     fullscreen = true,
+    customCursor = true,
+    cursorSize = 100,
     skin_front = 'zc',
     skin_back = 'zc',
     keybind = {
@@ -364,10 +363,10 @@ MX, MY = -260, 0 -- Mouse position
 -- Functions: Cursor
 
 function SetMouseVisible(bool)
-    if CONF.syscursor then
-        love.mouse.setVisible(bool)
-    else
+    if CONF.customCursor then
         GAME.cursorHide = not bool
+    else
+        love.mouse.setVisible(bool)
     end
 end
 
@@ -925,31 +924,13 @@ require 'module/initialize'
 local pressValue = 0
 local function starCursor(x, y)
     if GAME.cursorHide or GAME.zenithTraveler then return end
-    gc_translate(x, y)
-    gc_scale(1.42)
-    gc_rotate(MATH.lerp(-.626, -1.2, pressValue))
-    gc_scale(.8 + .2 * pressValue, 1)
-    local l = .626 + .374 * pressValue
-    gc_setColor(l, l, l)
-    gc_draw(TEXTURE.star0, 0, -6, 0, .14, .3, TEXTURE.star1:getWidth() * .5, 0)
-    gc_scale(.12, .26)
-    gc_setShader(SHADER.coloring)
-    gc_setColor(1, .626, .5)
-    gc_draw(TEXTURE.star0, -150, 0)
-    if GAME.cursorProg <= .384626 then
-        local t = MATH.interpolate(0, 1, .384626, 0, GAME.cursorProg)
-        gc_setColor(.9, .9, .9, t)
-        gc_draw(TEXTURE.star0, -150, 0)
-        gc_setShader()
-    else
-        gc_setShader()
-        gc_setColor(1, 1, 1, MATH.iLerp(.384626, 1, GAME.cursorProg))
-        gc_draw(TEXTURE.star1, -150, 0)
-    end
+    gc_setColor(1, 1, 1)
+    local k = .0026 * CONF.cursorSize
+    gc_draw(TEXTURE.cursor, x, y, -.574 * pressValue, k, k, 12, 18)
 end
 function ApplySettings()
-    love.mouse.setVisible(CONF.syscursor)
-    ZENITHA.globalEvent.drawCursor = CONF.syscursor and NULL or starCursor
+    love.mouse.setVisible(not CONF.customCursor)
+    ZENITHA.globalEvent.drawCursor = CONF.customCursor and starCursor or NULL
     SFX.setVol(CONF.sfx / 100)
     BGM.setVol(CONF.bgm / 100)
 end
@@ -1406,7 +1387,7 @@ function Daemon_Fast()
         end
 
         -- Mouse holding animation
-        if not CONF.syscursor then
+        if CONF.customCursor then
             pressValue = MSisDown(1, 2) and 1 or expApproach(pressValue, 0, dt * 12)
         end
 
